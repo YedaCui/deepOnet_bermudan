@@ -50,7 +50,7 @@ class Hypercube:
         return reduce(mul, self.__dims)
 
     def sample(self, batch_size):
-        return torch.DoubleTensor(batch_size, *self.__dims).uniform_(*self.__interval) # only when use the finite difference for benchmark of greeks
+        # return torch.DoubleTensor(batch_size, *self.__dims).uniform_(*self.__interval) # only when use the finite difference for benchmark of greeks
         return torch.FloatTensor(batch_size, *self.__dims).uniform_(*self.__interval) # normally used
 
     def __repr__(self):

@@ -3,7 +3,6 @@ import time
 import torch
 from torch import nn
 from typing import List, Tuple
-from .exp_linear import Linear
 
 EPSILON = 1e-08
 NORMLAYERS = {
@@ -318,24 +317,6 @@ class Feedforward(BaseNet):
 
     def forward(self, tensor):
         return self.net(tensor)[-1]
-
-
-class ExpMLP(BaseNet):
-    """
-    exponential MLP
-    """
-
-    def __init__(self, dim_in, config):
-        super().__init__(dim_in, config)
-        self.No_normalization_and_flatten = True
-        self.expmlp1 = Linear(self.config["input_dim"], self.config["hidden_dim"])
-        self.expmlp2 = Linear(self.config["hidden_dim"], 1, bias = False)
-
-    def forward(self, tensor):
-        x = self.expmlp1(tensor)
-        x = torch.relu(x)
-        x = self.expmlp2(x)
-        return x
 
 
 NETS = {net.__name__: net for net in BaseNet.get_subclasses()}
