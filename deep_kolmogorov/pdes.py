@@ -82,16 +82,8 @@ class Data(Dataset):
         for _k, _v in self.frezed_params:
             batch[_k].fill_(_v)
 
-        if self.get_X is not None:
-            batch["x"] = self.get_X(batch)
         if self.get_K is not None:
             batch["K"] = self.get_K(batch)
-        if self.get_r is not None:
-            batch["r"] = self.get_r(batch)
-        if self.get_sigma is not None:
-            batch["sigma"] = self.get_sigma(batch)
-        if "x" not in batch:
-            batch["x"] = batch["s"].clone()
         return batch
 
 class Pde(ABC):
@@ -120,13 +112,13 @@ class Pde(ABC):
     def dim_flat(self):
         return sum([cube.dim_flat for cube in self.__hypercubes.values()])
 
-    def dataloader(self, batch_size, n_batches, data_type, Testset_narrow_x=False, frezed_params):
+    def dataloader(self, batch_size, n_batches, data_type, Testset_narrow_x=False, frezed_params={}):
         '''
         frezed_params (dict) : dictionary of frezed parameters and their values.
         '''
         if not Testset_narrow_x:
             return DataLoader(
-                    Data(self.__hypercubes, batch_size, n_batches, self.get_X, self.get_K, self.get_r, self.get_sigma), batch_size=None
+                    Data(self.__hypercubes, batch_size, n_batches, self.get_X, self.get_K, self.get_r, self.get_sigma, frezed_params=frezed_params), batch_size=None
                 )
         ### If Testset_narrow_x is True, the following code will be implemented and testset x will be narrow.
         if data_type == 'train':
@@ -308,7 +300,6 @@ HYPERCUBES["black_scholes_r"] = {
     "t": Hypercube(interval=[0.0, 1.0]),
     "s": Hypercube(interval=[9.0, 10.0]),
     "r": Hypercube(interval=[0.005, 0.08]),
-    # "r": Hypercube(interval=[0, 1e-8]),
     "sigma": Hypercube(interval=[0.1, 0.6]),
     "kappa": Hypercube(interval=[0.8, 1.2]),
 }
