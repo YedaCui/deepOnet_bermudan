@@ -56,13 +56,12 @@ class Hypercube:
     def __repr__(self):
         return f'hypercube {self.__interval}^({"x".join(map(str,self.__dims))})'
 
-
 class Data(Dataset):
     """
     Uniformly distributed input data as a PyTorch (infinite) dataset.
     """
 
-    def __init__(self, hypercubes, batch_size, n_batches, get_X, get_K, get_r, get_sigma):
+    def __init__(self, hypercubes, batch_size, n_batches, get_X, get_K, get_r, get_sigma, frezed_params = {}):
         self.batch_size = batch_size
         self.n_batches = n_batches
         self.hypercubes = hypercubes
@@ -70,6 +69,7 @@ class Data(Dataset):
         self.get_K = get_K
         self.get_r = get_r
         self.get_sigma = get_sigma
+        self.frezed_params = frezed_params  # dictionary of frezed parameters and their values
 
     def __len__(self):
         return self.n_batches
@@ -78,6 +78,10 @@ class Data(Dataset):
         batch = {
             key: cube.sample(self.batch_size) for key, cube in self.hypercubes.items()
         }
+        # Set all the frezed parameters
+        for _k, _v in self.frezed_params:
+            batch[_k].fill_(_v)
+
         if self.get_X is not None:
             batch["x"] = self.get_X(batch)
         if self.get_K is not None:
@@ -116,13 +120,16 @@ class Pde(ABC):
     def dim_flat(self):
         return sum([cube.dim_flat for cube in self.__hypercubes.values()])
 
-    def dataloader(self, batch_size, n_batches, data_type, Testset_narrow_x=False):
+    def dataloader(self, batch_size, n_batches, data_type, Testset_narrow_x=False, frezed_params):
+        '''
+        frezed_params (dict) : dictionary of frezed parameters and their values.
+        '''
         if not Testset_narrow_x:
             return DataLoader(
                     Data(self.__hypercubes, batch_size, n_batches, self.get_X, self.get_K, self.get_r, self.get_sigma), batch_size=None
                 )
-        ### Use it when want the testset x be in [9,10] 
-        if data_type == 'train': 
+        ### If Testset_narrow_x is True, the following code will be implemented and testset x will be narrow.
+        if data_type == 'train':
             return DataLoader(
                 Data(self.__hypercubes, batch_size, n_batches, self.get_X, self.get_K, self.get_r, self.get_sigma), batch_size=None
             )
@@ -211,97 +218,6 @@ class Pde(ABC):
         return res
 
 
-HYPERCUBES = {
-    f"basket_{d_basket}d": {
-        "t": Hypercube(interval=[0.0, 1.0]),
-        "x": Hypercube(interval=[9.0, 10.0], dims=(d_basket,)),
-        "sigma": Hypercube(
-            interval=[0.1, 0.6], dims=(d_basket, d_basket, d_basket + 1)
-        ),
-        "mu": Hypercube(interval=[0.1, 0.6], dims=(d_basket, d_basket + 1)),
-        "K": Hypercube(interval=[10.0, 12.0]),
-    }
-    for d_basket in range(1, 6)
-}
-
-
-class Basket(Pde):
-    params = ("t", "x", "sigma", "mu", "K")
-
-    def __init__(self, hypercubes=HYPERCUBES["basket_3d"]):
-        super().__init__(hypercubes)
-
-    @staticmethod
-    def _check_dims(hypercubes):
-        d = hypercubes["x"].dims[0]
-        return all(
-            [
-                hypercubes["t"].dims == (1,),
-                hypercubes["x"].dims == (d,),
-                hypercubes["sigma"].dims == (d, d, d + 1),
-                hypercubes["mu"].dims == (d, d + 1),
-                hypercubes["K"].dims == (1,),
-            ]
-        )
-
-    @staticmethod
-    def sde(batch, steps=25):
-        """
-        Outputs batched realizations of the SDE.
-        """
-        batch_size, d = batch["x"].shape
-        steplen = (batch["t"] / steps).flatten()
-        std = torch.sqrt(steplen)
-        outputs = batch["x"].clone()
-        for _ in range(steps):
-            dw = (
-                torch.randn(
-                    d, batch_size, dtype=batch["x"].dtype, device=batch["x"].device
-                )
-                * std
-            )
-            sigma_x = (
-                torch.einsum("iklj, il -> ikj", batch["sigma"][:, :, :, :d], outputs)
-                + batch["sigma"][:, :, :, d]
-            )
-            mu_x = (
-                torch.einsum("ikj, ij -> ik", batch["mu"][:, :, :d], outputs)
-                + batch["mu"][:, :, d]
-            )
-            outputs += torch.einsum("ij, i -> ij", mu_x, steplen) + torch.einsum(
-                "ijk, ki -> ij", sigma_x, dw
-            )
-        return torch.nn.ReLU()(batch["K"] - outputs.mean(dim=1, keepdims=True))
-
-    @staticmethod
-    def solution(batch, steps=25, mc_rounds=1048576):
-        """
-        Outputs the MC approximated solution.
-        """
-        ys = []
-        for t, x, sigma, mu, K in zip(
-            batch["t"], batch["x"], batch["sigma"], batch["mu"], batch["K"]
-        ):
-            mu_t = mu[:, :-1].T
-            steplen = t / steps
-            std = torch.sqrt(steplen)
-            outputs = x.expand(mc_rounds, -1).clone()
-            for _ in range(steps):
-                dw = (
-                    torch.randn(mc_rounds, len(x), dtype=x.dtype, device=x.device) * std
-                )
-                sigma_x = (
-                    torch.einsum("ijk, lj -> lik", sigma[:, :, :-1], outputs)
-                    + sigma[:, :, -1]
-                )
-                mu_x = outputs @ mu_t + mu[:, -1]
-                outputs += mu_x * steplen + torch.einsum("ijk, ik -> ij", sigma_x, dw)
-            y = (torch.nn.ReLU()(K - outputs.mean(dim=1, keepdims=True))).mean(
-                dim=0, keepdims=True
-            )
-            ys.append(y)
-        return torch.cat(ys, dim=0)
-
 
 def n_dist(x):
     """
@@ -317,11 +233,13 @@ def n_density(x):
     return torch.exp(-(x ** 2) / 2.0) / math.sqrt(2.0 * math.pi)
 
 
-HYPERCUBES["black_scholes"] = {
+HYPERCUBES = {
+    "black_scholes" : {
     "t": Hypercube(interval=[0.0, 1.0]),
     "x": Hypercube(interval=[9.0, 10.0]),
     "sigma": Hypercube(interval=[0.1, 0.6]),
     "K": Hypercube(interval=[10.0, 12.0]),
+    }
 }
 
 
@@ -394,7 +312,6 @@ HYPERCUBES["black_scholes_r"] = {
     "sigma": Hypercube(interval=[0.1, 0.6]),
     "kappa": Hypercube(interval=[0.8, 1.2]),
 }
-
 
 class BSr(Pde):
     params = ("t", "x", "r", "sigma", "K")
