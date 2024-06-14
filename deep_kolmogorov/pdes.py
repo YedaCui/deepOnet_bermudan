@@ -137,13 +137,15 @@ class Pde(ABC):
     def naf(self, batch, param):
         raise NotImplementedError
 
-    def normalize_and_flatten(self, batch, No_normalization_and_flatten=False):
+    def normalize_and_flatten(self, batch, output_params = None):
         # batch = [
         #     (batch[param] - self.__hypercubes[param].mean) / self.hypercubes[param].std
         #     for param in self.params
         # ]
+        if output_params is None:
+            output_params = self.params
         batch = [
-            self.naf(batch, param, No_normalization_and_flatten) for param in self.params
+            self.naf(batch, param) for param in output_params
         ]
         return torch.cat([tensor.flatten(start_dim=1) for tensor in batch], dim=1)
 
@@ -314,18 +316,24 @@ class BSr(Pde):
     def _check_dims(hypercubes):
         return all(cube.dims == (1,) for cube in hypercubes.values())
 
-    def sde(self, batch):
+    def sde(self, t, x, r, sigma, K, option_type="put"):
         """
         Outputs batched realizations of the SDE.
+        Args:
+        t : time to maturity
+        x : current stock price 
         """
-        t = self.hypercubes["t"].interval[1] - batch["t"]
+
         dw = torch.sqrt(t) * torch.randn(
-            batch["x"].shape, dtype=batch["x"].dtype, device=batch["x"].device
+            x.shape, dtype=x.dtype, device=x.device
         )
-        sde = batch["x"] * torch.exp(
-             batch["r"] * t - 0.5 * t * batch["sigma"] ** 2 + batch["sigma"] * dw
+        sde = x * torch.exp(
+             r * t - 0.5 * t * sigma ** 2 + sigma * dw
         )
-        return torch.exp(-batch["r"] * self.hypercubes['t'].interval[1]) * torch.nn.ReLU()(sde - batch["K"])
+        if option_type == "call":
+            return torch.nn.ReLU()(sde - K)
+        else:
+            return torch.nn.ReLU()(K - sde)
 
     @staticmethod
     def get_X(batch):
@@ -349,24 +357,38 @@ class BSr(Pde):
     
     get_r, get_sigma = None, None
 
-    def solution(self, batch):
-        """
-        Outputs the exact solution.
-        """
-        t = self.hypercubes["t"].interval[1] - batch["t"]
-        sigma_sqrtt = batch["sigma"] * torch.sqrt(t)
+    # def solution(self, batch):
+    #     """
+    #     Outputs the exact solution.
+    #     """
+    #     t = self.hypercubes["t"].interval[1] - batch["t"]
+    #     sigma_sqrtt = batch["sigma"] * torch.sqrt(t)
+    #     _d = (
+    #         (
+    #             torch.log(batch["x"] / batch["K"])
+    #             + batch["r"] * t +  0.5 * t * batch["sigma"] ** 2
+    #         )
+    #         / sigma_sqrtt
+    #     )
+    #     return batch["x"] * n_dist(_d) - batch["K"] * torch.exp(-batch["r"]*t) * n_dist(_d - sigma_sqrtt)
+
+    def option_price(t, x, sigma, r, K, option_type = "put"):
+        sigma_sqrtt = sigma * torch.sqrt(t)
         _d = (
             (
-                torch.log(batch["x"] / batch["K"])
-                + batch["r"] * t +  0.5 * t * batch["sigma"] ** 2
+                torch.log(x / K)
+                + r * t +  0.5 * t * sigma ** 2
             )
             / sigma_sqrtt
         )
-        return batch["x"] * n_dist(_d) - batch["K"] * torch.exp(-batch["r"]*t) * n_dist(_d - sigma_sqrtt)
+        if option_type == "call":
+            return x * n_dist(_d) - K * torch.exp(-r*t) * n_dist(_d - sigma_sqrtt)
+        else:
+            return x * n_dist(_d) - K * torch.exp(-r*t) * n_dist(_d - sigma_sqrtt) + K * torch.exp(-r*t) - x
+
+        
     
-    def naf(self, batch, param, No_normalization_and_flatten=False):
-        if No_normalization_and_flatten:
-            return batch[param]
+    def naf(self, batch, param):
         if param == "x":
             return (batch[param] - self.hypercubes["s"].mean) /  self.hypercubes["s"].std
         elif param == 'K':
