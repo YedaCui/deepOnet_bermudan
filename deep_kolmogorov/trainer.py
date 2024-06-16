@@ -28,14 +28,6 @@ def compatibility(config):
         config["lr_decay"] = config.pop("decay")
     if "decay_patience" in config:
         config["lr_decay_patience"] = config.pop("decay_patience")
-    # for k in ["net", "pde"]:
-    #     config[k] = "".join(
-    #         [
-    #             s
-    #             for word in config[k].split("_")
-    #             for s in [word[0].capitalize(), word[1:]]
-    #         ]
-    #     )
     return config
 
 

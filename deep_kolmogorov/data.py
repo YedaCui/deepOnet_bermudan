@@ -53,16 +53,13 @@ class Data_Bermudan(Dataset):
             res[_k] = torch.concat(res[_k], dim=0)
         return res
 
-            
 
 
 
-            
 
 
-        
-        
-        
+
+
 
 
 
