@@ -1,0 +1,41 @@
+Failure # 1 (occurred at 2024-06-17_16-18-12)
+The actor died because of an error raised in its creation task, concurrent.futures.process._RemoteTraceback: 
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/multiprocessing/queues.py", line 245, in _feed
+    obj = _ForkingPickler.dumps(obj)
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/multiprocessing/reduction.py", line 51, in dumps
+    cls(buf, protocol).dump(obj)
+AttributeError: Can't pickle local object 'parallel_interpolation.<locals>.<lambda>'
+"""
+
+The above exception was the direct cause of the following exception:
+
+[36mray::Trainer.__init__()[39m (pid=411104, ip=137.189.58.22, actor_id=eed5b2514fea5f434dc60d5701000000, repr=<deep_kolmogorov.trainer.Trainer object at 0x7f8eb3454ca0>)
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/ray/tune/trainable/trainable.py", line 169, in __init__
+    self.setup(copy.deepcopy(self.config))
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/trainer.py", line 89, in setup
+    first_scores_test = self._test_loop()
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/trainer.py", line 153, in _test_loop
+    for batch in self.test_loader:
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 652, in __next__
+    data = self._next_data()
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 692, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 51, in fetch
+    data = self.dataset[possibly_batched_index]
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/bermudan.py", line 55, in __getitem__
+    torch.exp(- dt_pde["r"] * self.T/self.num_ex) * parallel_interpolation(xs, self.payoff.x, dt_payoff, interp_method=self.interp_method)
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/utils.py", line 16, in parallel_interpolation
+    res = list(executor.map(
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/concurrent/futures/process.py", line 567, in _chain_from_iterable_of_lists
+    for element in iterable:
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/concurrent/futures/_base.py", line 609, in result_iterator
+    yield fs.pop().result()
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/concurrent/futures/_base.py", line 439, in result
+    return self.__get_result()
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/concurrent/futures/_base.py", line 391, in __get_result
+    raise self._exception
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/multiprocessing/queues.py", line 245, in _feed
+    obj = _ForkingPickler.dumps(obj)
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/multiprocessing/reduction.py", line 51, in dumps
+    cls(buf, protocol).dump(obj)
+AttributeError: Can't pickle local object 'parallel_interpolation.<locals>.<lambda>'

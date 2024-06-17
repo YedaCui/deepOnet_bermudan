@@ -1,5 +1,5 @@
 import abc
-import torch
+import numpy as np
 from sklearn import gaussian_process as gp
 
 
@@ -15,6 +15,11 @@ class FunctionSpace(abc.ABC):
         Returns:
             A NumPy array of shape (`size`, n_features).
         """
+    @classmethod
+    def get_subclasses(cls):
+        for subclass in cls.__subclasses__():
+            yield from subclass.get_subclasses()
+            yield subclass
 
     # @abc.abstractmethod
     # def eval_one(self, feature, x):
@@ -63,7 +68,7 @@ class GRF(FunctionSpace):
             "quadratic", or "cubic".
     """
 
-    def __init__(self, sensor = torch.exp(torch.linspace(-4, 5)), kernel="RBF", length_scale=10):
+    def __init__(self, sensor, kernel="RBF", length_scale=10):
         self.x = sensor
         self.N = self.x.shape[0]
         if kernel == "RBF":
@@ -71,11 +76,11 @@ class GRF(FunctionSpace):
         elif kernel == "AE":
             K = gp.kernels.Matern(length_scale=length_scale, nu=0.5)
         self.K = K(self.x)
-        self.L = torch.linalg.cholesky(self.K + 1e-13 * torch.eye(self.N))
+        self.L = np.linalg.cholesky(self.K + 1e-13 * np.eye(self.N))
 
     def random(self, size):
-        u = torch.random.randn(self.N, size)
-        return (self.L @ u).T
+        u = np.random.randn(self.N, size)
+        return np.dot(self.L, u).T
     
 
 

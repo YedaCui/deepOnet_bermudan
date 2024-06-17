@@ -79,7 +79,7 @@ class Data(Dataset):
             key: cube.sample(self.batch_size) for key, cube in self.hypercubes.items()
         }
         # Set all the frezed parameters
-        for _k, _v in self.frezed_params:
+        for _k, _v in self.frezed_params.items():
             batch[_k].fill_(_v)
 
         if self.get_K is not None:
