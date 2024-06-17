@@ -134,14 +134,11 @@ class Pde(ABC):
         #     Data(self.__hypercubes, batch_size, n_batches, None, None, self.get_r, None), batch_size=None
         # )
 
+    @abstractmethod
     def naf(self, batch, param):
-        raise NotImplementedError
+        pass
 
     def normalize_and_flatten(self, batch, output_params = None):
-        # batch = [
-        #     (batch[param] - self.__hypercubes[param].mean) / self.hypercubes[param].std
-        #     for param in self.params
-        # ]
         if output_params is None:
             output_params = self.params
         batch = [
@@ -156,17 +153,12 @@ class Pde(ABC):
 
     @staticmethod
     @abstractmethod
-    def _check_dims(hypercubes):
-        pass
-
-    @staticmethod
-    @abstractmethod
     def sde(batch):
         pass
 
     @staticmethod
     @abstractmethod
-    def solution(batch):
+    def option_price(batch):
         pass
 
     def __repr__(self):
@@ -316,7 +308,8 @@ class BSr(Pde):
     def _check_dims(hypercubes):
         return all(cube.dims == (1,) for cube in hypercubes.values())
 
-    def sde(self, t, x, r, sigma):
+    @staticmethod
+    def sde(t, x, r, sigma):
         """
         Outputs batched realizations of the SDE.
         Args:
@@ -369,6 +362,7 @@ class BSr(Pde):
     #     )
     #     return batch["x"] * n_dist(_d) - batch["K"] * torch.exp(-batch["r"]*t) * n_dist(_d - sigma_sqrtt)
 
+    @staticmethod
     def option_price(t, x, sigma, r, K, option_type = "put"):
         sigma_sqrtt = sigma * torch.sqrt(t)
         _d = (
