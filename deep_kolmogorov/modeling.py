@@ -17,9 +17,8 @@ class BaseNet(torch.nn.Module):
     Base class for different networks.
     """
 
-    def __init__(self, dim_in, config):
+    def __init__(self, config):
         super().__init__()
-        self.dim_in = dim_in
         self.config = config
         self.params_groups = [{"params": self.parameters()}]
         self.active_groups = []
@@ -92,10 +91,11 @@ class DeepONet(BaseNet):
     trunk_layer: The list of hidden sizes of trunk nets
     """
 
-    def __init__(self, dim_in, config):
-        super().__init__(dim_in, config)
+    def __init__(self, config):
+        super().__init__(config)
+        self.size_sensor = config["size_sensor"]
         self.size_t, self.size_x, self.size_u = self.config["size_t_x_u"]
-        self.branch = DenseNet([self.size_u] + [self.config["num_width"]] * self.config["num_depth"])
+        self.branch = DenseNet([self.size_u + self.size_sensor] + [self.config["num_width"]] * self.config["num_depth"])
         self.trunk = DenseNet([self.size_t + self.size_x] + [self.config["num_width"]] * self.config["num_depth"])
 
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
@@ -103,8 +103,8 @@ class DeepONet(BaseNet):
         The input of state can be either 3-dim or 4-dim but once fixed a problem the
         dimension of the input tensor is fixed.
         """
-        time_tensor, state_tensor, u_tensor = tensor[:, 0:self.size_t], tensor[:, self.size_t:self.size_x+self.size_t], tensor[:, self.size_x+self.size_t:]
-        br = self.branch(u_tensor)
+        sensor_tensor, time_tensor, state_tensor, u_tensor = tensor[:, 0:self.size_sensor], tensor[:, self.size_sensor:self.size_sensor+self.size_t], tensor[:, self.size_sensor+self.size_t:self.size_sensor+self.size_t+self.size_x], tensor[:, self.size_sensor+self.size_t+self.size_x:]
+        br = self.branch(torch.cat([sensor_tensor,u_tensor], -1))
         tr = self.trunk(torch.cat([time_tensor, state_tensor], -1))
         value = torch.sum(br * tr, dim=-1, keepdim=True)
         return value
@@ -139,7 +139,7 @@ class KernelOperator(DenseOperator):
     
 
 class DeepKernelONet(DeepONet):
-    def __init__(self, dim_in, config):
+    def __init__(self, config):
         self.num_para = config["size_t_x_u"][-1] # number of all parameters
         self.in_channels = config["in_channels"] # number of time inhomogeneoust parameters
         self.num_timepoints = config["num_timepoints"] # number of time points of the TI parameters
@@ -147,7 +147,7 @@ class DeepKernelONet(DeepONet):
         self.total_u = self.num_para - self.in_channels + self.num_timepoints * self.in_channels # the total dims of parameters 
 
         config["size_t_x_u"] = [config["size_t_x_u"][0], config["size_t_x_u"][1], self.num_para - self.in_channels + self.num_outputs] # update the size_t_x_u
-        super().__init__(dim_in, config)
+        super().__init__(config)
         self.kernel = KernelOperator(config["in_channels"], config["out_channels"], config["kernel_size"], config["num_outputs"])
         # bin = self.kernel(torch.randn(1,2,20, device=torch.device("cuda"))) # add it when loading checkpoint with the input shape same as the experiment
 

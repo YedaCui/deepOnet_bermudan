@@ -52,7 +52,7 @@ class Trainer(tune.Trainable):
             else {}
         )
         self.pde = PDES[config["pde"]](**pde_kwargs)
-        self.net = NETS[config["net"]](self.pde.dim_flat, config)
+        self.net = NETS[config["net"]](config)
         payoff_kwargs = {
             _arg: config[_arg] for _arg in ["sensor", "kernel", "length_scale"] if _arg in config.keys()
             }
@@ -315,11 +315,21 @@ def stopper_factory(metrics, thresholds, modes):
 
 
 HYPERCONFIGS = {
-    "avg_bs_r": {
+    "avg_bs_bermudan_put": {
         "seed": tune.grid_search([0]),
         "checkpoint": True,
         "pde": "BSr",
         "net": "DeepONet",
+        "payoff": "GRF",
+        "sensor": torch.exp(torch.linspace(-4, 5, 100)),
+        "kernel": "RBF", 
+        "length_scale":10,
+        "T": 1,
+        "num_ex": 1,
+        "option_type": "put",
+        "output_params": ["x"],
+        "frezed_params": {"t":0, "r": 0.025, "sigma":0.3, "kappa": 1},
+        "interp_method": "linear",
         "opt": "adamw",
         "bs": 120000,
         "lr": 0.01,
@@ -332,9 +342,9 @@ HYPERCONFIGS = {
         "n_iterations": 30,
         "n_train_batches": 2000,
         "n_test_batches": 1,
-        "size_t_x_u": [1,1,3],
+        "size_t_x_u": [0,1,0],
+        "size_sensor": 100,
         "num_width" : tune.grid_search([35,55,75]),
-        # "num_depth" : 7,
         "num_depth" : tune.grid_search([5,7]),
     },
 
