@@ -187,7 +187,7 @@ class KolmogorovNet(torch.nn.Module):
         if train:
             y_pred = self.net.forward(tensor)
         else:
-            y_pred = self.price_bermudan(batch)
+            y_pred = self.net.forward(tensor)
         return {"bermudan": y, "net": y_pred}
     
     def price_bermudan(self, batch):
