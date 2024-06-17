@@ -185,10 +185,15 @@ class KolmogorovNet(torch.nn.Module):
                  self.bermudan.pde.normalize_and_flatten(batch, self.bermudan.output_params)], dim = 1
             )
         if train:
-            y_pred = torch.exp(- batch["r"] * batch["t"]) * self.net.forward(tensor)
-        else:
             y_pred = self.net.forward(tensor)
+        else:
+            y_pred = self.price_bermudan(batch)
         return {"bermudan": y, "net": y_pred}
+    
+    def price_bermudan(self, batch):
+        pass
+
+        
 
     def test_greeks(self, batch, greeks=["delta"], method="autodiff", d=0.001):
         device = next(self.net.parameters()).device  # 获取模型所在的设备
