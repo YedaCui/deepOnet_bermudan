@@ -7,6 +7,9 @@ from datetime import datetime
 from argparse import ArgumentParser
 from .modeling import Metrics, KolmogorovNet, NETS, NORMLAYERS
 from .pdes import HYPERCUBES, PDES
+from .bermudan import Bermudan, Data_Saved
+from torch.utils.data import DataLoader
+from .payoff import PAYOFFS
 
 OPTIMIZERS = {
     "adamw": lambda params, lr, weight_decay: torch.optim.AdamW(
@@ -50,7 +53,12 @@ class Trainer(tune.Trainable):
         )
         self.pde = PDES[config["pde"]](**pde_kwargs)
         self.net = NETS[config["net"]](self.pde.dim_flat, config)
-        self.model = KolmogorovNet(self.net, self.pde)
+        payoff_kwargs = {
+            _arg: config[_arg] for _arg in ["sensor", "kernel", "length_scale"] if _arg in config.keys()
+            }
+        self.payoff = PAYOFFS[config["payoff"]](**payoff_kwargs)
+        self.bermudan = Bermudan(self.pde, self.payoff, config)
+        self.model = KolmogorovNet(self.net, self.bermudan)
         self.num_net_params = self.net.get_num_params()
         # cuda
         if torch.cuda.is_available() and config["gpus"] > 0:
@@ -65,9 +73,16 @@ class Trainer(tune.Trainable):
         self.test_metr = Metrics()
         self.val_metr = Metrics()
         # data
-        self.train_loader = self.pde.dataloader(config["bs"], config["n_train_batches"], 'train')
-        self.test_loader = self.pde.dataloader(config["bs"], config["n_test_batches"], 'test')
-        self.val_loader = self.pde.dataloader(config["bs"], config["n_test_batches"], 'val')
+        self.data_path = config["data_path"] # if None, generate data for each iteration.
+        if self.data_path:
+            self.train_loader = DataLoader(Data_Saved(self.data_path["train"]), config["bs"]) 
+            self.val_loader = DataLoader(Data_Saved(self.data_path["val"]), config["bs"])
+            self.test_loader = DataLoader(Data_Saved(self.data_path["test"]), config["bs"])
+        else:
+            self.train_loader = self.bermudan.dataloader(config["bs"], config["n_train_batches"], config["frezed_params"], config["interp_method"])
+            self.test_loader = self.bermudan.dataloader(config["bs"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
+            self.val_loader = self.bermudan.dataloader(config["bs"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
+            
         # stats
         # first_scores_test = self._test_loop()
         try:
@@ -300,34 +315,6 @@ def stopper_factory(metrics, thresholds, modes):
 
 
 HYPERCONFIGS = {
-    "avg_bs": {
-        "seed": tune.grid_search([0]),
-        "checkpoint": True,
-        "pde": "BlackScholes",
-        # "net": "MultilevelNet",
-        "net": "DeepONet",
-        "norm_layer": "batchnorm",
-        "opt": "adamw",
-        # "bs": 65536,
-        "bs": 120000,
-        "lr": 0.01,
-        "min_lr": 1e-8,
-        "lr_decay": 0.25,
-        "lr_decay_patience": 2,
-        "weight_decay": 0.01,
-        "unfreeze": "all",
-        "unfreeze_patience": 1,
-        "levels": 4,
-        "factor": 5,
-        "n_iterations": 15,
-        "n_train_batches": 2000,
-        "n_test_batches": 1,
-        "size_t_x_u": [1,1,2],
-        # "num_depth" : tune.grid_search([4,5,6]),
-        # "num_width" : tune.grid_search([45,55])
-        "num_width" : tune.grid_search([35,55,75]),
-        "num_depth" : tune.grid_search([5,7]),
-    },
     "avg_bs_r": {
         "seed": tune.grid_search([0]),
         "checkpoint": True,
@@ -350,238 +337,7 @@ HYPERCONFIGS = {
         # "num_depth" : 7,
         "num_depth" : tune.grid_search([5,7]),
     },
-    "avg_bs_lookback": {
-        "seed": tune.grid_search([0]),
-        "checkpoint": True,
-        "pde": "BSlookback",
-        "net": "DeepONet",
-        "opt": "adamw",
-        "bs": 120000,
-        "lr": 0.01,
-        "min_lr": 1e-8,
-        "lr_decay": 0.25,
-        "lr_decay_patience": 2,
-        "weight_decay": 0.01,
-        "unfreeze": "all",
-        "unfreeze_patience": 1,
-        "n_iterations": 30,
-        "n_train_batches": 2000,
-        "n_test_batches": 150,
-        "size_t_x_u": [1,2,2],
-        "num_width" : tune.grid_search([35,55,75]),
-        "num_depth" : 5,
-        # "num_width" : 55
-    },
-        "avg_bs_asian": {
-        "seed": tune.grid_search([0]),
-        "checkpoint": True,
-        "pde": "BSasian",
-        "net": "DeepONet",
-        "opt": "adamw",
-        "bs": 120000,
-        "lr": 0.01,
-        "min_lr": 1e-8,
-        "lr_decay": 0.25,
-        "lr_decay_patience": 2,
-        "weight_decay": 0.01,
-        "unfreeze": "all",
-        "unfreeze_patience": 1,
-        "n_iterations": 30,
-        "n_train_batches": 2000,
-        "n_test_batches": 1,
-        "size_t_x_u": [1,2,3],
-        "num_width" : tune.grid_search([35,55,75]),
-        "num_depth" : tune.grid_search([5,7]),
-        # "num_width" : 55
-    },
-    "avg_bs_basket": {
-        "seed": tune.grid_search([0]),
-        "checkpoint": True,
-        "pde": "BSbasket",
-        "net": "DeepONet",
-        "opt": "adamw",
-        "bs": 120000,
-        "lr": 0.01,
-        "min_lr": 1e-8,
-        "lr_decay": 0.25,
-        "lr_decay_patience": 2,
-        "weight_decay": 0.01,
-        "unfreeze": "all",
-        "unfreeze_patience": 1,
-        "n_iterations": 30,
-        "n_train_batches": 2000,
-        "n_test_batches": 1,
-        "size_t_x_u": [1,10,13],
-        "num_depth" : tune.grid_search([5,7]),
-        "num_width" : tune.grid_search([35, 55, 75])
-    },
-        "avg_bs_basket_PI": {
-        "seed": tune.grid_search([0]),
-        "checkpoint": True,
-        "pde": "BSbasket",
-        "net": "DeepONetwithPI",
-        "opt": "adamw",
-        "bs": 120000,
-        "lr": 0.01,
-        "min_lr": 1e-8,
-        "lr_decay": 0.25,
-        "lr_decay_patience": 2,
-        "weight_decay": 0.01,
-        "unfreeze": "all",
-        "unfreeze_patience": 1,
-        "n_iterations": 30,
-        "n_train_batches": 2000,
-        "n_test_batches": 1,
-        "size_t_x_u": [1,50,13],
-        "num_depth" : tune.grid_search([5,7]),
-        "num_width" : tune.grid_search([35, 55, 75]),
-        # "num_width" : tune.grid_search([75]),
-        "num_assets" : 10,
-        "pi_layer" :  tune.grid_search([[70,70],[100,100]])
-    },
-    "avg_bs_TI": {
-        "seed": tune.grid_search([0]),
-        "checkpoint": True,
-        "pde": "BSTI",
-        "net": "DeepKernelONet",
-        "opt": "adamw",
-        "bs": 120000,
-        "lr": 0.01,
-        "min_lr": 1e-8,
-        "lr_decay": 0.25,
-        "lr_decay_patience": 2,
-        "weight_decay": 0.01,
-        "unfreeze": "all",
-        "unfreeze_patience": 1,
-        "n_iterations": 30,
-        "n_train_batches": 2000,
-        "n_test_batches": 1,
-        "size_t_x_u": [1,1,3],
-        "num_width" : tune.grid_search([35,55,75]),
-        "num_depth" : tune.grid_search([5,7]),
-        "in_channels": 2, # number of time inhomogeneoust parameters
-        "num_timepoints": 20, # number of time points of the TI parameters
-        "num_outputs": 6, # the output dimension of the embedding net
-        "out_channels": 4,
-        "kernel_size": 15,
-    },
-    "avg_bs_basket_TI": {
-        "seed": tune.grid_search([0]),
-        "checkpoint": True,
-        "pde": "BSbasketTI",
-        "net": "DeepKernelONet",
-        "opt": "adamw",
-        "bs": 120000,
-        "lr": 0.01,
-        "min_lr": 1e-8,
-        "lr_decay": 0.25,
-        "lr_decay_patience": 2,
-        "weight_decay": 0.01,
-        "unfreeze": "all",
-        "unfreeze_patience": 1,
-        "n_iterations": 30,
-        "n_train_batches": 2000,
-        "n_test_batches": 1,
-        "size_t_x_u": [1,10,13],
-        "num_width" : tune.grid_search([35,55,75]),
-        "num_depth" : tune.grid_search([5,7]),
-        "in_channels": 11, # number of time inhomogeneoust parameters
-        "num_timepoints": 20, # number of time points of the TI parameters
-        "num_outputs": 6, # the output dimension of the embedding net
-        "out_channels": 4,
-        "kernel_size": 15,
-    },
-    "avg_bs_basket_TI_PI": {
-        "seed": tune.grid_search([0]),
-        "checkpoint": True,
-        "pde": "BSbasketTI",
-        "net": "DeepKernelONetwithPI",
-        "opt": "adamw",
-        "bs": 120000,
-        "lr": 0.01,
-        "min_lr": 1e-8,
-        "lr_decay": 0.25,
-        "lr_decay_patience": 2,
-        "weight_decay": 0.01,
-        "unfreeze": "all",
-        "unfreeze_patience": 1,
-        "n_iterations": 30,
-        "n_train_batches": 2000,
-        "n_test_batches": 1,
-        "size_t_x_u": [1,10,13],
-        "num_width" : tune.grid_search([35,55,75]),
-        "num_depth" : tune.grid_search([5,7]),
-        "in_channels": 11, # number of time inhomogeneoust parameters
-        "num_timepoints": 20, # number of time points of the TI parameters
-        "num_outputs": 6, # the output dimension of the embedding net
-        "out_channels": 6,
-        "kernel_size": 15,
-        "num_assets" : 10,
-        "pi_layer" : [100,100]
-    },
-        "avg_MJD": {
-        "seed": tune.grid_search([0]),
-        "checkpoint": True,
-        "pde": "MJD",
-        "net": "DeepONet",
-        "opt": "adamw",
-        "bs": 120000,
-        "lr": 0.01,
-        "min_lr": 1e-8,
-        "lr_decay": 0.25,
-        "lr_decay_patience": 2,
-        "weight_decay": 0.01,
-        "unfreeze": "all",
-        "unfreeze_patience": 1,
-        "n_iterations": 30,
-        "n_train_batches": 2000,
-        "n_test_batches": 1,
-        "size_t_x_u": [1,1,6],
-        "num_width" : tune.grid_search([35,55,75, 95, 115, 135, 155, 175, 195, 215]),
-        # "num_depth" : 7,
-        "num_depth" : tune.grid_search([5,7,9]),
-    },
-    "avg_MJDbasket": {
-        "seed": tune.grid_search([0]),
-        "checkpoint": True,
-        "pde": "MJDbasket",
-        "net": "DeepONet",
-        "opt": "adamw",
-        "bs": 120000,
-        "lr": 0.01,
-        "min_lr": 1e-8,
-        "lr_decay": 0.25,
-        "lr_decay_patience": 2,
-        "weight_decay": 0.01,
-        "unfreeze": "all",
-        "unfreeze_patience": 1,
-        "n_iterations": 30,
-        "n_train_batches": 2000,
-        "n_test_batches": 1,
-        "size_t_x_u": [1,10,35],
-        "num_width" : tune.grid_search([35,55,75, 95, 115, 135, 155, 175, 195, 215]),
-        "num_depth" : tune.grid_search([5,7,9]),
-    },
-    "avg_bs_r_expmlp": {
-        "seed": tune.grid_search([0]),
-        "checkpoint": True,
-        "pde": "BSr",
-        "net": "ExpMLP",
-        "opt": "adamw",
-        "bs": 120000,
-        "lr": 0.01,
-        "min_lr": 1e-8,
-        "lr_decay": 0.25,
-        "lr_decay_patience": 2,
-        "weight_decay": 0.01,
-        "unfreeze": "all",
-        "unfreeze_patience": 1,
-        "n_iterations": 30,
-        "n_train_batches": 2000,
-        "n_test_batches": 1,
-        "input_dim": 10,
-        "hidden_dim" : tune.grid_search([50,100,300]),
-    },
+
 }
 
 

@@ -63,7 +63,7 @@ class GRF(FunctionSpace):
             "quadratic", or "cubic".
     """
 
-    def __init__(self, sensor = None, kernel="RBF", length_scale=10):
+    def __init__(self, sensor = torch.exp(torch.linspace(-4, 5)), kernel="RBF", length_scale=10):
         self.x = sensor
         self.N = self.x.shape[0]
         if kernel == "RBF":
@@ -76,3 +76,8 @@ class GRF(FunctionSpace):
     def random(self, size):
         u = torch.random.randn(self.N, size)
         return (self.L @ u).T
+    
+
+
+
+PAYOFFS = {pf.__name__: pf for pf in FunctionSpace.get_subclasses()}

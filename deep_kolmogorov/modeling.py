@@ -110,46 +110,6 @@ class DeepONet(BaseNet):
         return value
 
 
-class PermutationInvariantLayer(nn.Module):
-    def __init__(self, num_outputs):
-        super(PermutationInvariantLayer, self).__init__()
-        self.num_outputs = num_outputs
-        ## valid when loading checkpoint the shape of the parameters should be same as the experiment
-        self.kernel = None
-        self.bias = None
-
-
-    def forward(self, inputs):
-        if self.kernel is None:
-            _, _, in_features = inputs.shape
-            self.kernel = nn.Parameter(torch.randn(in_features, self.num_outputs, device=inputs.device))
-            self.bias = nn.Parameter(torch.randn(self.num_outputs, device=inputs.device))
-        output = torch.tensordot(inputs, self.kernel, dims=([-1], [0])) + self.bias
-        output = torch.relu(output)
-        return output
-
-
-class DeepONetwithPI(DeepONet):
-    def __init__(self, dim_in, config):
-        config["size_t_x_u"] = [config["size_t_x_u"][0], config["pi_layer"][0], config["size_t_x_u"][-1]] # update the size_t_x_u
-        super().__init__(dim_in, config)
-        self.num_assets = config["num_assets"]
-        self.PI_layers = nn.Sequential(*[PermutationInvariantLayer(m) for m in config["pi_layer"]])
-        # bin = self.PI_layers(torch.randn(1,10,1, device=torch.device("cuda"))) # add it when loading checkpoint with the input shape same as the experiment
-
-    def reshape_state(self, state: torch.Tensor):
-        batch_size, dim = state.shape
-        num_markov = dim // self.num_assets
-        return state.view(batch_size, self.num_assets, num_markov)
-
-    def forward(self, tensor: Tuple[torch.Tensor]) -> torch.Tensor:
-        time_tensor, state_tensor, u_tensor = tensor[:, 0:self.size_t], tensor[:, self.size_t:-self.size_u], tensor[:, -self.size_u:]
-        state_tensor = self.reshape_state(state_tensor)
-        state_before_pi = self.PI_layers(state_tensor)
-        state_after_pi = torch.mean(state_before_pi, dim=-2)
-        inputs_for_deeponet = torch.concat([time_tensor, state_after_pi, u_tensor], dim=1)
-        return super().forward(inputs_for_deeponet)
-
 
 class DenseOperator(nn.Module):
     def __init__(self, num_outputs):
@@ -201,124 +161,6 @@ class DeepKernelONet(DeepONet):
         return super().forward(inputs_for_deeponet)
 
 
-class DeepKernelONetwithPI(DeepONet):
-    def __init__(self, dim_in, config):
-        self.num_para = config["size_t_x_u"][-1] # number of all parameters
-        self.in_channels = config["in_channels"] # number of time inhomogeneoust parameters
-        self.num_timepoints = config["num_timepoints"] # number of time points of the TI parameters
-        self.num_outputs = config["num_outputs"] # the output dimension of the embedding net
-        self.total_u = self.num_para - self.in_channels + self.num_timepoints * self.in_channels # the total dims of parameters 
-
-        config["size_t_x_u"] = [config["size_t_x_u"][0], config["pi_layer"][0], self.num_para - self.in_channels + self.num_outputs] # update the size_t_x_u
-        super().__init__(dim_in, config)
-        self.num_assets = config["num_assets"]
-        self.PI_layers = nn.Sequential(*[PermutationInvariantLayer(m) for m in config["pi_layer"]])
-        # bin = self.PI_layers(torch.randn(1,10,1, device=torch.device("cuda"))) # add it when loading checkpoint with the input shape same as the experiment
-        self.kernel = KernelOperator(config["in_channels"], config["out_channels"], config["kernel_size"], config["num_outputs"])
-
-    def reshape_state(self, state: torch.Tensor):
-        batch_size, dim = state.shape
-        num_markov = dim // self.num_assets
-        return state.view(batch_size, self.num_assets, num_markov)
-
-    def forward(self, tensor: Tuple[torch.Tensor]) -> torch.Tensor:
-        time_tensor, state_tensor, u_tensor = tensor[:, 0:self.size_t], tensor[:, self.size_t:-self.total_u], tensor[:, -self.total_u:]
-        # PI net
-        state_tensor = self.reshape_state(state_tensor)
-        state_before_pi = self.PI_layers(state_tensor)
-        state_after_pi = torch.mean(state_before_pi, dim=-2)
-        # embedding
-        u_const, u_ti = u_tensor[:, 0:self.num_para-self.in_channels], u_tensor[:, self.num_para-self.in_channels:].reshape(u_tensor.shape[0], self.in_channels, -1)
-        u_ti_after_embedding = self.kernel(u_ti)
-
-        inputs_for_deeponet = torch.concat([time_tensor, state_after_pi, u_const, u_ti_after_embedding], dim=1)
-        return super().forward(inputs_for_deeponet)
-
-
-class LevelNet(nn.Module):
-    """
-    Network module for a single level.
-    """
-
-    def __init__(self, dim_in, dim, level, norm_layer):
-        super().__init__()
-        self.level = level
-        self.dense_layers = nn.ModuleList([nn.Linear(dim_in, dim, bias=False)])
-        self.dense_layers += [
-            nn.Linear(dim, dim, bias=False) for _ in range(2 ** level - 1)
-        ]
-        self.dense_layers.append(nn.Linear(dim, 1))
-        self.norm_layers = nn.ModuleList(
-            [NORMLAYERS[norm_layer](dim, eps=EPSILON) for _ in range(2 ** level)]
-        )
-        self.act = nn.ReLU()
-
-    def forward(self, tensor, res_tensors=None):
-        out_tensors = []
-        tensor = self.dense_layers[0](tensor)
-        for i, dense in enumerate(self.dense_layers[1:]):
-            tensor = self.norm_layers[i](tensor)
-            tensor = self.act(tensor)
-            tensor = dense(tensor)
-            if res_tensors:
-                tensor = tensor + res_tensors[i]
-            if i % 2 or self.level == 0:
-                out_tensors.append(tensor)
-        return out_tensors
-
-
-class MultilevelNet(BaseNet):
-    """
-    Multilevel net.
-    """
-
-    def __init__(self, dim_in, config):
-        super().__init__(dim_in, config)
-        dim = self.config["factor"] * self.dim_in
-        self.nets = nn.ModuleList(
-            [
-                LevelNet(self.dim_in, dim, level, config["norm_layer"])
-                for level in range(self.config["levels"])
-            ]
-        )
-        self.params_groups = [{"params": net.parameters()} for net in self.nets]
-
-    def forward(self, tensor):
-        res_tensors = None
-        for net in self.nets[::-1]:
-            res_tensors = net(tensor, res_tensors)
-        return res_tensors[-1]
-
-
-class MultilevelNetNoRes(MultilevelNet):
-    """
-    Multilevel net without residual connections.
-    """
-
-    def __init__(self, dim_in, config):
-        super().__init__(dim_in, config)
-
-    def forward(self, tensor):
-        output = self.nets[0](tensor)[-1]
-        for net in self.nets[1:]:
-            output += net(tensor)[-1]
-        return output
-
-
-class Feedforward(BaseNet):
-    """
-    Feedforward net.
-    """
-
-    def __init__(self, dim_in, config):
-        super().__init__(dim_in, config)
-        dim = self.config["factor"] * self.dim_in
-        self.net = LevelNet(self.dim_in, dim, config["levels"], config["norm_layer"])
-
-    def forward(self, tensor):
-        return self.net(tensor)[-1]
-
-
 NETS = {net.__name__: net for net in BaseNet.get_subclasses()}
 
 
@@ -327,29 +169,26 @@ class KolmogorovNet(torch.nn.Module):
     DL Kolmogorov model.
     """
 
-    def __init__(self, net, pde):
+    def __init__(self, net, bermudan):
         super().__init__()
         self.net = net
-        self.pde = pde
+        self.bermudan = bermudan
 
     def forward(self, batch, train=True):
         with torch.no_grad():
             if train:
-                y = self.pde.sde(batch)
+                y = batch["y"]
             else:
-                if hasattr(self.pde, "get_rmt"):
-                    y = torch.exp(- self.pde.get_rmt(0, batch["t"], batch["r0"], batch["r1"], batch["r2"])) * self.pde.solution(batch)
-                else:
-                    y = torch.exp(- batch["r"] * batch["t"]) * self.pde.solution(batch)
-            if hasattr(self.net, "No_normalization_and_flatten"):
-                tensor = self.pde.normalize_and_flatten(batch, No_normalization_and_flatten = True)
-            else:
-                tensor = self.pde.normalize_and_flatten(batch, No_normalization_and_flatten = False)
-        if hasattr(self.pde, "get_rmt"):
-            y_pred = torch.exp(- self.pde.get_rmt(0, batch["t"], batch["r0"], batch["r1"], batch["r2"])) * self.net.forward(tensor)
-        else:
+                y = self.bermudan.solution(batch)
+            tensor = torch.concat(
+                [batch["payoff"],
+                 self.bermudan.pde.normalize_and_flatten(batch, self.bermudan.output_params)], dim = 1
+            )
+        if train:
             y_pred = torch.exp(- batch["r"] * batch["t"]) * self.net.forward(tensor)
-        return {"pde": y, "net": y_pred}
+        else:
+            y_pred = self.net.forward(tensor)
+        return {"bermudan": y, "net": y_pred}
 
     def test_greeks(self, batch, greeks=["delta"], method="autodiff", d=0.001):
         device = next(self.net.parameters()).device  # 获取模型所在的设备
@@ -451,8 +290,8 @@ class Metrics:
         self._current_t = time.time()
 
     def store(self, output, return_loss=None):
-        abs_error = (output["pde"] - output["net"]).abs()
-        magnitude = output["pde"].abs() + 1
+        abs_error = (output["bermudan"] - output["net"]).abs()
+        magnitude = output["bermudan"].abs() + 1
         rel_error = abs_error / magnitude
         # rel_error = (abs_error / magnitude).mean(dim=1, keepdim=True) # component wisely relative error
         # rel_error = abs_error.sum(dim=1, keepdim=True) / ( output["pde"].abs().sum(dim=1, keepdim=True) + 1 ) # L1 relative error

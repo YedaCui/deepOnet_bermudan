@@ -316,7 +316,7 @@ class BSr(Pde):
     def _check_dims(hypercubes):
         return all(cube.dims == (1,) for cube in hypercubes.values())
 
-    def sde(self, t, x, r, sigma, K, option_type="put"):
+    def sde(self, t, x, r, sigma):
         """
         Outputs batched realizations of the SDE.
         Args:
@@ -330,10 +330,7 @@ class BSr(Pde):
         sde = x * torch.exp(
              r * t - 0.5 * t * sigma ** 2 + sigma * dw
         )
-        if option_type == "call":
-            return torch.nn.ReLU()(sde - K)
-        else:
-            return torch.nn.ReLU()(K - sde)
+        return sde
 
     @staticmethod
     def get_X(batch):
