@@ -69,7 +69,7 @@ class GRF(FunctionSpace):
     """
 
     def __init__(self, sensor, kernel="RBF", length_scale=10):
-        self.x = sensor
+        self.x = sensor.reshape(-1,1)
         self.N = self.x.shape[0]
         if kernel == "RBF":
             K = gp.kernels.RBF(length_scale=length_scale)

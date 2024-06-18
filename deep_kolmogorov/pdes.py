@@ -144,7 +144,7 @@ class Pde(ABC):
         batch = [
             self.naf(batch, param) for param in output_params
         ]
-        return torch.cat([tensor.flatten(start_dim=1) for tensor in batch], dim=1)
+        return torch.cat(batch, dim=1)
 
     @property
     @abstractmethod
