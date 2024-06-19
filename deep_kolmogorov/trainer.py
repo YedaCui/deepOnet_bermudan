@@ -79,9 +79,9 @@ class Trainer(tune.Trainable):
             self.val_loader = DataLoader(Data_Saved(self.data_path["val"]), config["bs"])
             self.test_loader = DataLoader(Data_Saved(self.data_path["test"]), config["bs"])
         else:
-            self.train_loader = self.bermudan.dataloader(config["bs"], config["n_train_batches"], config["frezed_params"], config["interp_method"])
-            self.test_loader = self.bermudan.dataloader(config["bs"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
-            self.val_loader = self.bermudan.dataloader(config["bs"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
+            self.train_loader = self.bermudan.dataloader(config["bs_train"], config["n_train_batches"], config["frezed_params"], config["interp_method"])
+            self.test_loader = self.bermudan.dataloader(config["bs_val"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
+            self.val_loader = self.bermudan.dataloader(config["bs_test"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
             
         # stats
         first_scores_test = self._test_loop()
