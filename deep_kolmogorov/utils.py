@@ -37,7 +37,7 @@ def parallel_interpolation(xs, x, features, interp_method):
     res = torch.from_numpy(res).to(xs_device)
     return res
 
-def CN_bermudan_1D(cpflag, K, T, num_ex, vol, r, d, N = 100, x_max=3, S0=10):
+def CN_bermudan_1D(cpflag, K, T, num_ex, vol, r, d, N = 1000, x_max=3, S0=10):
     '''
     args:
     cpflag: str, "call" or "put".
@@ -87,3 +87,5 @@ def CN_bermudan_1D(cpflag, K, T, num_ex, vol, r, d, N = 100, x_max=3, S0=10):
         if (j%dJ==0) and j!=J:
             V = torch.where(V>V0,V,V0)
     return S0*torch.exp(X), V.squeeze(-1)
+
+def sample()
