@@ -84,18 +84,18 @@ class Trainer(tune.Trainable):
             self.val_loader = self.bermudan.dataloader(config["bs"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
             
         # stats
-        # first_scores_test = self._test_loop()
-        try:
-            first_scores_test = self._test_loop()
-        except RuntimeError as e:
-            if "expected scalar type Float but found Double" in str(e):
-                print("Caught type mismatch error: converting model to float64")
-                self.model.to(torch.float64)
-                # Optionally, you may want to re-run the test loop after conversion
-                first_scores_test = self._test_loop()
-            else:
-                # Raise the error again if it's not the specific type mismatch error
-                raise e
+        first_scores_test = self._test_loop()
+        # try:
+        #     first_scores_test = self._test_loop()
+        # except RuntimeError as e:
+        #     if "expected scalar type Float but found Double" in str(e):
+        #         print("Caught type mismatch error: converting model to float64")
+        #         self.model.to(torch.float64)
+        #         # Optionally, you may want to re-run the test loop after conversion
+        #         first_scores_test = self._test_loop()
+        #     else:
+        #         # Raise the error again if it's not the specific type mismatch error
+        #         raise e
 
         first_scores_val = self._val_loop()
         self.initial_stats = {

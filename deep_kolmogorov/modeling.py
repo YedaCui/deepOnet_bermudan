@@ -187,32 +187,38 @@ class KolmogorovNet(torch.nn.Module):
         if train:
             y_pred = self.net.forward(tensor)
         else:
-            y_pred = self.price_bermudan(tensor)
+            y_pred = self.price_bermudan(batch)
         return {"bermudan": y, "net": y_pred}
     
     def price_bermudan(self, batch):
-        N = batch["t"].shape[0] / self.bermudan.num_ex
+        N = int(batch["t"].shape[0] / self.bermudan.num_ex)
         batch = {
             _param: batch[_param][:N] for _param in batch.keys()
         }
-        for i in range(self.num_ex, 0, -1):
-            if i == self.num_ex:
+        for i in range(self.bermudan.num_ex, 0, -1):
+            if i == self.bermudan.num_ex:
                 cont_value = torch.zeros(1,1, device=batch["t"].device)
             else:
-                size_sensor = self.bermudan.payoff.x.shape[0]
+                size_sensor = self.bermudan.sensor.shape[0]
                 dt_payoff_sensor = dt_payoff.repeat_interleave(size_sensor, dim=0)
                 batch_sensor = {_param:batch[_param].repeat_interleave(size_sensor, dim=0) for _param in self.bermudan.output_params}
-                batch_sensor["x"] = self.bermudan.payoff.x.repeat(batch["x"].shape[0],1)
+                batch_sensor["x"] = self.bermudan.sensor.repeat(batch["x"].shape[0],1)
                 with torch.no_grad():
                     tensor = torch.concat(
                         [dt_payoff_sensor,
                         self.bermudan.pde.normalize_and_flatten(batch_sensor, self.bermudan.output_params)], dim = 1
                     )
                     cont_value = self.net.forward(tensor).reshape(batch["x"].shape[0],size_sensor)
-            if self.option_type == "call":
-                dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(self.bermudan.payoff.x.reshape(1,-1) - batch["K"]))
+            if self.bermudan.option_type == "call":
+                dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(self.bermudan.sensor.reshape(1,-1) - batch["K"]))
             else:
-                dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(batch["K"]-self.bermudan.payoff.x.reshape(1,-1)))
+                print("device of  cont_value :")
+                print(cont_value.device)
+                print("device of  K :")
+                print(batch["K"].device)
+                print("device of  payoff :")
+                print(self.bermudan.sensor.device)
+                dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(batch["K"]-self.bermudan.sensor.reshape(1,-1)))
         
         with torch.no_grad():
             tensor = torch.concat(

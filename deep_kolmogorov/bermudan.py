@@ -75,6 +75,7 @@ class Bermudan():
     def __init__(self, pde, payoff, config):
         self.pde = pde
         self.payoff = payoff
+        self.sensor = self.payoff.x.clone()
         self.T = config["T"]
         self.num_ex = config["num_ex"]
         self.option_type = config["option_type"]
