@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from scipy import interpolate
 from concurrent.futures import ProcessPoolExecutor
 
@@ -23,7 +24,7 @@ def parallel_interpolation(xs, x, features, interp_method):
     print("Finish the interpolation.")
     return res
 
-def CN_bermudan_1D(cpflag, K, T, num_ex, vol, r, d, N = 10000, x_max=3, S0=10):
+def CN_bermudan_1D(cpflag, K, T, num_ex, vol, r, d, N = 1000, x_max=3, S0=10):
     '''
     args:
     cpflag: str, "call" or "put".
@@ -37,7 +38,7 @@ def CN_bermudan_1D(cpflag, K, T, num_ex, vol, r, d, N = 10000, x_max=3, S0=10):
     Attension: the ND arrays should have the same shape.
     '''
     # grid along x dimension:
-    X = np.linspace(-x_max,x_max,N+1)
+    X = torch.linspace(-x_max,x_max,N+1)
     #number of steps along x
     dx = 2*x_max/N
 
@@ -52,24 +53,24 @@ def CN_bermudan_1D(cpflag, K, T, num_ex, vol, r, d, N = 10000, x_max=3, S0=10):
     a = 0.25*dt*vol*vol/(dx*dx)
     b = 0.25*dt*mu/dx
     c = 0.5*dt*r
-    A, B = np.zeros((a.shape[0],N+1,N+1)), np.zeros((a.shape[0],N+1,N+1))
+    A, B = torch.zeros((a.shape[0],N+1,N+1)), torch.zeros((a.shape[0],N+1,N+1))
     for _n in range(a.shape[0]):
         _a, _b, _c = a[_n], b[_n], c[_n]
-        A[_n,:,:] = (1+_c+2*_a)*np.eye(N+1) + (-_a-_b)*np.eye(N+1,k=1) + (_b-_a)*np.eye(N+1,k=-1)
-        B[_n,:,:] = (1-_c-2*_a)*np.eye(N+1) + (_a+_b)*np.eye(N+1,k=1) + (_a-_b)*np.eye(N+1,k=-1)
-    Ainv = np.linalg.inv(A)
+        A[_n,:,:] = (1+_c+2*_a)*torch.eye(N+1) + (-_a-_b)*torch.eye(N+1,k=1) + (_b-_a)*torch.eye(N+1,k=-1)
+        B[_n,:,:] = (1-_c-2*_a)*torch.eye(N+1) + (_a+_b)*torch.eye(N+1,k=1) + (_a-_b)*torch.eye(N+1,k=-1)
+    Ainv = torch.linalg.inv(A)
     
     if cpflag == 'call':
         # Option payoff at maturity
-        V = np.expand_dims(np.clip(S0*np.exp(X).reshape(1,-1) - K.reshape(-1,1),0,1e10), 1).transpose(0,2,1)
+        V = torch.clamp(S0*torch.exp(X).reshape(1,-1) - K.reshape(-1,1),0,1e10).unsqueeze(1).transpose(0,2,1)
     elif cpflag == 'put':
-        V = np.expand_dims(K.reshape(-1,1) - np.clip(S0*np.exp(X).reshape(1,-1),0,1e10), 1).transpose(0,2,1)
+        V = torch.clamp(K.reshape(-1,1) - S0*torch.exp(X).reshape(1,-1),0,1e10).unsqueeze(1).transpose(0,2,1)
     
-    V0 = V.copy()
+    V0 = V.clone()
     for j in range(1, J+1):
         V = B @ V
         V = Ainv @ V
         # apply early exercise boundary conditions:
         if (j%dJ==0) and j!=J:
-            V = np.where(V>V0,V,V0)
-    return S0*np.exp(X), np.squeeze(V,-1)
+            V = torch.where(V>V0,V,V0)
+    return S0*torch.exp(X), V.squeeze(-1)
