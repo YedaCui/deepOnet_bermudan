@@ -169,17 +169,21 @@ class KolmogorovNet(torch.nn.Module):
     DL Kolmogorov model.
     """
 
-    def __init__(self, net, bermudan):
+    def __init__(self, net, bermudan, saved_data):
         super().__init__()
         self.net = net
         self.bermudan = bermudan
+        self.saved_data = saved_data
 
     def forward(self, batch, train=True):
         with torch.no_grad():
             if train:
                 y = batch["y"]
             else:
-                y = self.bermudan.solution(batch)
+                if self.saved_data:
+                    y = batch["solution"] # shape batch["x"].shape[0] / self.bermudan.num_ex
+                else:
+                    y = self.bermudan.solution(batch)
             tensor = torch.concat(
                 [batch["payoff"],
                  self.bermudan.pde.normalize_and_flatten(batch, self.bermudan.output_params)], dim = 1

@@ -121,10 +121,13 @@ def sampling(config):
             os.makedirs(path)
         _idx = 0
         for batch in dt_loader:
+            if dt_type in ["val", "test"]:
+                batch["solution"] = bermudan.solution(batch)
             batch = {
                 _param: torch.from_numpy(batch[_param]) if isinstance(batch[_param], np.ndarray) else batch[_param] 
                 for _param in batch.keys()
             }
+            
             torch.save(batch,os.path.join(path,f"train_{_idx}.pt"))
             _idx += 1
 

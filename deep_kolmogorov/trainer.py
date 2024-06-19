@@ -58,7 +58,8 @@ class Trainer(tune.Trainable):
             }
         self.payoff = PAYOFFS[config["payoff"]](**payoff_kwargs)
         self.bermudan = BERMUDANS[config["bermudan"]](self.pde, self.payoff, config)
-        self.model = KolmogorovNet(self.net, self.bermudan)
+        saved_data = True if config["data_path"] else False
+        self.model = KolmogorovNet(self.net, self.bermudan, saved_data=saved_data)
         self.num_net_params = self.net.get_num_params()
         # cuda
         if torch.cuda.is_available() and config["gpus"] > 0:
