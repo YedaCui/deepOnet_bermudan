@@ -2,7 +2,6 @@ import torch
 import copy
 from torch.utils.data import Dataset, DataLoader
 from .utils import *
-from abc import ABC, abstractmethod
 
 
 class Data_Bermudan(Dataset):
@@ -72,11 +71,10 @@ class Data_Saved(Dataset):
             _param: self.data[_param][idx] for _param in self.data.keys()
         }
 
-class Bermudan(ABC):
+class Bermudan():
     def __init__(self, pde, payoff, config):
         self.pde = pde
         self.payoff = payoff
-        self.sensor = self.payoff.x.clone()
         self.T = config["T"]
         self.num_ex = config["num_ex"]
         self.option_type = config["option_type"]
@@ -87,7 +85,6 @@ class Bermudan(ABC):
             Data_Bermudan(self.pde, self.payoff, self.T, self.num_ex, self.option_type, batch_size, n_batches, frezed_params, interp_method), None
         )
 
-    @abstractmethod
     def solution(self, batch):
         pass
 
