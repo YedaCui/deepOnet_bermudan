@@ -117,7 +117,7 @@ def sampling(config):
 
     def save_data(path, dt_type, dt_loader):
         path = os.path.join(path,dt_type)
-        if not os.path.exists(path_train):
+        if not os.path.exists(path):
             os.makedirs(path)
         _idx = 0
         for batch in dt_loader:
