@@ -2,6 +2,7 @@ import torch
 import copy
 from torch.utils.data import Dataset, DataLoader
 from .utils import *
+from abc import ABC, abstractmethod
 
 
 class Data_Bermudan(Dataset):
@@ -71,7 +72,7 @@ class Data_Saved(Dataset):
             _param: self.data[_param][idx] for _param in self.data.keys()
         }
 
-class Bermudan():
+class Bermudan(ABC):
     def __init__(self, pde, payoff, config):
         self.pde = pde
         self.payoff = payoff
@@ -86,7 +87,28 @@ class Bermudan():
             Data_Bermudan(self.pde, self.payoff, self.T, self.num_ex, self.option_type, batch_size, n_batches, frezed_params, interp_method), None
         )
 
+    @abstractmethod
     def solution(self, batch):
-        return self.pde.option_price(torch.full_like(batch["t"], self.T), batch["x"], batch["sigma"], batch["r"], batch["K"], option_type=self.option_type)
+        pass
+
+
+class Bermudan_1D(Bermudan):
+    def __init__(self, pde, payoff, config):
+        super().__init__(pde, payoff, config)
+
+    def solution(self, batch):
+        N = int(batch["x"].shape[0] / self.bermudan.num_ex)
+        batch = {
+            _param: batch[_param][:N] for _param in batch.keys()
+        }
+        
+        grid, values = CN_bermudan_1D(cpflag=self.option_type, K=batch["K"].flatten(), T=self.T, num_ex=self.num_ex, 
+                        vol=batch["sigma"].flatten(), r=batch["r"].flatten(), d=batch["q"].flatten())
+
+        return parallel_interpolation(batch["x"], grid, values, interp_method="linear")
+        
+
+        
+        
         
 

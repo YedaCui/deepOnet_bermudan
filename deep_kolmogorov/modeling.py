@@ -191,7 +191,7 @@ class KolmogorovNet(torch.nn.Module):
         return {"bermudan": y, "net": y_pred}
     
     def price_bermudan(self, batch):
-        N = int(batch["t"].shape[0] / self.bermudan.num_ex)
+        N = int(batch["x"].shape[0] / self.bermudan.num_ex)
         batch = {
             _param: batch[_param][:N] for _param in batch.keys()
         }
