@@ -7,7 +7,7 @@ from datetime import datetime
 from argparse import ArgumentParser
 from .modeling import Metrics, KolmogorovNet, NETS, NORMLAYERS
 from .pdes import HYPERCUBES, PDES
-from .bermudan import Bermudan, Data_Saved
+from .bermudan import BERMUDANS, Data_Saved
 from torch.utils.data import DataLoader
 from .payoff import PAYOFFS
 
@@ -57,7 +57,7 @@ class Trainer(tune.Trainable):
             _arg: config[_arg] for _arg in ["sensor", "kernel", "length_scale"] if _arg in config.keys()
             }
         self.payoff = PAYOFFS[config["payoff"]](**payoff_kwargs)
-        self.bermudan = Bermudan(self.pde, self.payoff, config)
+        self.bermudan = BERMUDANS[config["bermudan"]](self.pde, self.payoff, config)
         self.model = KolmogorovNet(self.net, self.bermudan)
         self.num_net_params = self.net.get_num_params()
         # cuda
@@ -324,6 +324,7 @@ HYPERCONFIGS = {
         "sensor": torch.exp(torch.linspace(-4, 5, 100)),
         "kernel": "RBF", 
         "length_scale":10,
+        "bermudan": "Bermudan_1D",
         "T": 1,
         "num_ex": 1,
         "option_type": "put",
