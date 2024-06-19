@@ -50,7 +50,7 @@ class Data_Bermudan(Dataset):
                 res[_k].append(dt_pde[_k].clone())
             res["payoff"].append(dt_payoff)
 
-            xs = self.pde.sde(torch.full_like(dt_pde["t"], self.T/self.num_ex), dt_pde["x"], dt_pde["r"], dt_pde["sigma"])
+            xs = self.pde.sde(torch.full_like(dt_pde["t"], self.T/self.num_ex), dt_pde["x"], dt_pde["r"], dt_pde["q"], dt_pde["sigma"])
 
             res["y"].append(
                 torch.exp(- dt_pde["r"] * self.T/self.num_ex) * parallel_interpolation(xs, self.payoff.x, dt_payoff, interp_method=self.interp_method)
@@ -91,13 +91,19 @@ class Bermudan(ABC):
     def solution(self, batch):
         pass
 
+    @classmethod
+    def get_subclasses(cls):
+        for subclass in cls.__subclasses__():
+            yield from subclass.get_subclasses()
+            yield subclass
+
 
 class Bermudan_1D(Bermudan):
     def __init__(self, pde, payoff, config):
         super().__init__(pde, payoff, config)
 
     def solution(self, batch):
-        N = int(batch["x"].shape[0] / self.bermudan.num_ex)
+        N = int(batch["x"].shape[0] / self.num_ex)
         batch = {
             _param: batch[_param][:N] for _param in batch.keys()
         }
@@ -110,5 +116,5 @@ class Bermudan_1D(Bermudan):
 
         
         
-        
+BERMUDANS = {bermudan.__name__: bermudan for bermudan in Bermudan.get_subclasses()}
 
