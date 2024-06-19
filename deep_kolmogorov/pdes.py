@@ -294,12 +294,13 @@ HYPERCUBES["black_scholes_r"] = {
     "t": Hypercube(interval=[0.0, 1.0]),
     "s": Hypercube(interval=[9.0, 10.0]),
     "r": Hypercube(interval=[0.005, 0.08]),
+    "q": Hypercube(interval=[0.005,0.25]),
     "sigma": Hypercube(interval=[0.1, 0.6]),
     "kappa": Hypercube(interval=[0.8, 1.2]),
 }
 
 class BSr(Pde):
-    params = ("t", "x", "r", "sigma", "K")
+    params = ("t", "x", "r", "q", "sigma", "K")
 
     def __init__(self, hypercubes=HYPERCUBES["black_scholes_r"]):
         super().__init__(hypercubes)
@@ -309,7 +310,7 @@ class BSr(Pde):
         return all(cube.dims == (1,) for cube in hypercubes.values())
 
     @staticmethod
-    def sde(t, x, r, sigma):
+    def sde(t, x, r, q, sigma):
         """
         Outputs batched realizations of the SDE.
         Args:
@@ -321,7 +322,7 @@ class BSr(Pde):
             x.shape, dtype=x.dtype, device=x.device
         )
         sde = x * torch.exp(
-             r * t - 0.5 * t * sigma ** 2 + sigma * dw
+             (r-q) * t - 0.5 * t * sigma ** 2 + sigma * dw
         )
         return sde
 
@@ -334,7 +335,7 @@ class BSr(Pde):
             batch["s"].shape, dtype=batch["s"].dtype, device=batch["s"].device
         )
         sde = batch["s"] * torch.exp(
-            batch["r"] * batch["t"] - 0.5 * batch["t"] * batch["sigma"] ** 2 + batch["sigma"] * dw
+            (batch["r"] - batch["q"]) * batch["t"] - 0.5 * batch["t"] * batch["sigma"] ** 2 + batch["sigma"] * dw
         )
         return sde
 
@@ -347,35 +348,20 @@ class BSr(Pde):
     
     get_r, get_sigma = None, None
 
-    # def solution(self, batch):
-    #     """
-    #     Outputs the exact solution.
-    #     """
-    #     t = self.hypercubes["t"].interval[1] - batch["t"]
-    #     sigma_sqrtt = batch["sigma"] * torch.sqrt(t)
-    #     _d = (
-    #         (
-    #             torch.log(batch["x"] / batch["K"])
-    #             + batch["r"] * t +  0.5 * t * batch["sigma"] ** 2
-    #         )
-    #         / sigma_sqrtt
-    #     )
-    #     return batch["x"] * n_dist(_d) - batch["K"] * torch.exp(-batch["r"]*t) * n_dist(_d - sigma_sqrtt)
-
     @staticmethod
-    def option_price(t, x, sigma, r, K, option_type = "put"):
+    def option_price(t, x, sigma, r, q, K, option_type = "put"):
         sigma_sqrtt = sigma * torch.sqrt(t)
         _d = (
             (
                 torch.log(x / K)
-                + r * t +  0.5 * t * sigma ** 2
+                + (r-q) * t +  0.5 * t * sigma ** 2
             )
             / sigma_sqrtt
         )
         if option_type == "call":
-            return x * n_dist(_d) - K * torch.exp(-r*t) * n_dist(_d - sigma_sqrtt)
+            return x * torch.exp(-q*t) * n_dist(_d) - K * torch.exp(-r*t) * n_dist(_d - sigma_sqrtt)
         else:
-            return x * n_dist(_d) - K * torch.exp(-r*t) * n_dist(_d - sigma_sqrtt) + K * torch.exp(-r*t) - x
+            return x * torch.exp(-q*t) * n_dist(_d) - K * torch.exp(-r*t) * n_dist(_d - sigma_sqrtt) + K * torch.exp(-r*t) - x * torch.exp(-q*t)
 
         
     

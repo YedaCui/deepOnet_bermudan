@@ -328,7 +328,7 @@ HYPERCONFIGS = {
         "num_ex": 1,
         "option_type": "put",
         "output_params": ["x"],
-        "frezed_params": {"t":0, "r": 0.025, "sigma":0.3, "kappa": 1},
+        "frezed_params": {"t":0, "r": 0.025, "q":0.05, "sigma":0.3, "kappa": 1},
         "interp_method": "linear",
         "opt": "adamw",
         "bs": 12000,
