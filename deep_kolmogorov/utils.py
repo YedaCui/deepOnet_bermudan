@@ -111,9 +111,11 @@ def sampling(config):
     train_loader = bermudan.dataloader(config["bs_train"], config["n_train_batches"], config["frezed_params"], config["interp_method"])
     test_loader = bermudan.dataloader(config["bs_val"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
     val_loader = bermudan.dataloader(config["bs_test"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
-
-    with open(os.path.join(path,"config.json"), "w") as f:
-        json.dump(config, f)
+    
+    # if not os.path.exists(os.path.join(path,"config.json")):
+    #     os.makedirs(os.path.join(path,"config.json"))
+    # with open(os.path.join(path,"config.json"), "w") as f:
+    #     json.dump(config, f)
 
     def save_data(path, dt_type, dt_loader):
         path = os.path.join(path,dt_type)
