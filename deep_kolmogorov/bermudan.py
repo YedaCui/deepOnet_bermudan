@@ -26,6 +26,7 @@ class Data_Bermudan(Dataset):
         '''
 
         dt_pde = next(iter(self.pde.dataloader(self.batch_size, 1, 'train', frezed_params=self.frezed_params))) # generate a batch pdes data
+        device = dt_pde["t"].device
         res = {"payoff": [],
                "y": []
                }
@@ -34,7 +35,7 @@ class Data_Bermudan(Dataset):
             dt_pde["x"] = self.pde.get_X(dt_pde)
             dt_pde["t"] += self.T/self.num_ex
             if i == self.num_ex-1:
-                cont_value = torch.zeros(1,1, device=dt_pde["t"].device)
+                cont_value = torch.zeros(1,1, device=device)
             else:
                 cont_value = self.pde.option_price(self.T - dt_pde["t"], self.payoff.x.reshape(1,-1), dt_pde["sigma"], dt_pde["r"], dt_pde["K"], option_type=self.option_type)
                 cont_value += torch.from_numpy(self.payoff.random(cont_value.shape[0]))
@@ -50,6 +51,7 @@ class Data_Bermudan(Dataset):
             res["payoff"].append(dt_payoff)
 
             xs = self.pde.sde(torch.full_like(dt_pde["t"], self.T/self.num_ex), dt_pde["x"], dt_pde["r"], dt_pde["q"], dt_pde["sigma"])
+            print(f"The device of dt_pde.t is {device}.")
 
             res["y"].append(
                 torch.exp(- dt_pde["r"] * self.T/self.num_ex) * parallel_interpolation(xs, self.payoff.x, dt_payoff, interp_method=self.interp_method)
@@ -75,6 +77,7 @@ class Bermudan():
     def __init__(self, pde, payoff, config):
         self.pde = pde
         self.payoff = payoff
+        self.sensor = self.payoff.x
         self.T = config["T"]
         self.num_ex = config["num_ex"]
         self.option_type = config["option_type"]
