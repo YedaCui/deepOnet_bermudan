@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 from .utils import *
+import os
 
 
 class Data_Bermudan(Dataset):
@@ -61,16 +62,27 @@ class Data_Bermudan(Dataset):
 
 
 class Data_Saved(Dataset):
-    def __init__(self, path):
-        self.data = torch.load(path)
+    def __init__(self, path, n_batches=None, iter_all=True):
+        self.data_dir = path
+        self.file_list = sorted(os.listdir(self.data_dir))
+        self._idx = 0
+        if n_batches is None:
+            self.n_batches = len(self.file_list)
+        else:
+            self.n_batches = n_batches
+        self.iter_all = iter_all
 
     def __len__(self):
-        return len(self.data[list(self.data.keys())[0]])
+        return self.n_batches
     
     def __getitem__(self, idx):
-        return {
-            _param: self.data[_param][idx] for _param in self.data.keys()
-        }
+        file_path = os.path.join(self.data_dir, self.file_list[self._idx])
+        data = torch.load(file_path)
+        self._idx += 1
+        self._idx = 0 if self._idx == len(self.file_list) else self._idx
+        if not self.iter_all:
+            self._idx = 0 if self._idx == self.n_batches else self._idx
+        return data
 
 class Bermudan():
     def __init__(self, pde, payoff, config):

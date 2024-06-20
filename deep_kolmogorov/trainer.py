@@ -76,9 +76,9 @@ class Trainer(tune.Trainable):
         # data
         self.data_path = config["data_path"] # if None, generate data for each iteration.
         if self.data_path:
-            self.train_loader = DataLoader(Data_Saved(os.path.join(self.data_path, "train")), config["bs"]) 
-            self.val_loader = DataLoader(Data_Saved(os.path.join(self.data_path, "val")), config["bs"])
-            self.test_loader = DataLoader(Data_Saved(os.path.join(self.data_path, "test")), config["bs"])
+            self.train_loader = DataLoader(Data_Saved(os.path.join(self.data_path, "train"), config["n_train_batches"]), None) 
+            self.val_loader = DataLoader(Data_Saved(os.path.join(self.data_path, "val"), config["n_test_batches"]), None)
+            self.test_loader = DataLoader(Data_Saved(os.path.join(self.data_path, "test"), config["n_test_batches"]), None)
         else:
             self.train_loader = self.bermudan.dataloader(config["bs_train"], config["n_train_batches"], config["frezed_params"], config["interp_method"])
             self.test_loader = self.bermudan.dataloader(config["bs_test"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
@@ -333,7 +333,12 @@ HYPERCONFIGS = {
         "frezed_params": {"t":0, "r": 0.025, "q":0.05, "sigma":0.3, "kappa": 1},
         "interp_method": "linear",
         "opt": "adamw",
-        "bs": 12000,
+        "bs_train": 10000,
+        "bs_test": 100,
+        # "n_train_batches": 2000,
+        # "n_test_batches": 1000,
+        "n_train_batches": 2,
+        "n_test_batches": 1,
         "lr": 0.01,
         "min_lr": 1e-8,
         "lr_decay": 0.25,
@@ -343,8 +348,6 @@ HYPERCONFIGS = {
         "unfreeze_patience": 1,
         "data_path": None,
         "n_iterations": 30,
-        "n_train_batches": 2000,
-        "n_test_batches": 1,
         "size_t_x_u": [0,1,0],
         "size_sensor": 100,
         "num_width" : tune.grid_search([35, 55, 75]),

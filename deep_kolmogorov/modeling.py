@@ -176,6 +176,10 @@ class KolmogorovNet(torch.nn.Module):
         self.saved_data = saved_data
 
     def forward(self, batch, train=True):
+        if batch["x"].ndim == 3:
+            batch = {
+            _k: _v.squeeze(0) for _k, _v in batch.items()
+            }
         with torch.no_grad():
             if train:
                 y = batch["y"]
