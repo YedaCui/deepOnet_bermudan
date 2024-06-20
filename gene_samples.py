@@ -16,9 +16,9 @@ config = {
         "interp_method": "linear",
         "bs_train": 10000,
         "bs_test": 100,
-        "n_train_batches": 1,
+        "n_train_batches": 30*2000,
         "n_test_batches": 1000,
         "size_sensor": 100,
-        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/testing"
+        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/frezed_test1"
     }
 sampling.sampling(config=config)
