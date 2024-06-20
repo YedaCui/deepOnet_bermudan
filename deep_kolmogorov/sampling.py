@@ -4,7 +4,7 @@ from .bermudan import BERMUDANS
 from .payoff import PAYOFFS
 import torch
 import numpy as np
-import os
+import os, json
 
 def sampling(config):
     path = config["path"]
@@ -23,11 +23,12 @@ def sampling(config):
     train_loader = bermudan.dataloader(config["bs_train"], config["n_train_batches"], config["frezed_params"], config["interp_method"])
     test_loader = bermudan.dataloader(config["bs_val"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
     val_loader = bermudan.dataloader(config["bs_test"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
-    
-    # if not os.path.exists(os.path.join(path,"config.json")):
-    #     os.makedirs(os.path.join(path,"config.json"))
-    # with open(os.path.join(path,"config.json"), "w") as f:
-    #     json.dump(config, f)
+
+    with open(os.path.join(path,"config.json"), "w") as f:
+        json.dump(
+            {_k: _v.tolist() if isinstance(_v, torch.Tensor) else _v
+                    for _k, _v in config.items()}
+                    , f)
 
     def save_data(path, dt_type, dt_loader):
         path = os.path.join(path,dt_type)
@@ -42,7 +43,7 @@ def sampling(config):
                 for _param in batch.keys()
             }
             
-            torch.save(batch,os.path.join(path,f"train_{_idx}.pt"))
+            torch.save(batch,os.path.join(path,f"{dt_type}_{_idx}.pt"))
             _idx += 1
 
     save_data(path, "train", train_loader)
