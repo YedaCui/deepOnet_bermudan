@@ -37,7 +37,7 @@ class Data_Bermudan(Dataset):
             if i == self.num_ex-1:
                 cont_value = torch.zeros(1,1, device=device)
             else:
-                cont_value = self.pde.option_price(self.T - dt_pde["t"], self.payoff.x.reshape(1,-1), dt_pde["sigma"], dt_pde["r"], dt_pde["K"], option_type=self.option_type)
+                cont_value = self.pde.option_price(self.T - dt_pde["t"], self.payoff.x.reshape(1,-1), dt_pde["sigma"], dt_pde["r"], dt_pde["q"], dt_pde["K"], option_type=self.option_type)
                 cont_value += torch.from_numpy(self.payoff.random(cont_value.shape[0]))
             if self.option_type == "call":
                 dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(self.payoff.x.reshape(1,-1)-dt_pde["K"]))
