@@ -7,7 +7,9 @@ import numpy as np
 import os, json
 
 def sampling(config):
-    path = config["path"]
+    path = config["data_path"]
+    if not os.path.exists(path):
+        os.makedirs(path)
     pde_kwargs = (
         {"hypercubes": HYPERCUBES[config["hypercubes"]]}
         if "hypercubes" in config
@@ -21,7 +23,7 @@ def sampling(config):
     bermudan = BERMUDANS[config["bermudan"]](pde, payoff, config)
 
     train_loader = bermudan.dataloader(config["bs_train"], config["n_train_batches"], config["frezed_params"], config["interp_method"])
-    test_loader = bermudan.dataloader(config["bs_val"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
+    test_loader = bermudan.dataloader(config["bs_test"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
     val_loader = bermudan.dataloader(config["bs_test"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
 
     with open(os.path.join(path,"config.json"), "w") as f:
@@ -37,6 +39,15 @@ def sampling(config):
         _idx = 0
         for batch in dt_loader:
             if dt_type in ["val", "test"]:
+                if torch.cuda.is_available():
+                    # available_gpus = [torch.cuda.device(i) for i in range(torch.cuda.device_count())]
+                    selected_gpu = None
+                    for i in range(1, torch.cuda.device_count()):
+                        if torch.cuda.memory_reserved(i) == 0:
+                            selected_gpu = f'cuda:{i}'
+                            break
+                    if selected_gpu:
+                        batch = {_k: _v.to(selected_gpu) for _k, _v in batch.items()}
                 batch["solution"] = bermudan.solution(batch)
             batch = {
                 _param: torch.from_numpy(batch[_param]) if isinstance(batch[_param], np.ndarray) else batch[_param] 

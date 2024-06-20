@@ -1,5 +1,4 @@
 import torch
-import copy
 from torch.utils.data import Dataset, DataLoader
 from .utils import *
 
