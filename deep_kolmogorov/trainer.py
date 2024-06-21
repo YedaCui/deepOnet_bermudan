@@ -242,7 +242,6 @@ def get_args():
         choices=OPTIMIZERS.keys(),
         help="choose the optimizer",
     )
-    parser.add_argument("--bs", default=65536, type=int, help="mini-batch size")
     parser.add_argument("--lr", default=1e-4, type=float, help="initial learning rate")
     parser.add_argument(
         "--min_lr", default=1e-8, type=float, help="threshold for learning rate"
