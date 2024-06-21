@@ -21,7 +21,7 @@ import torch
 #         "n_test_batches": 1000,
 #         "n_val_batches": 1000,
 #         "size_sensor": 100,
-#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/frezed_test1"
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/frezed_test_with_num_ex_1"
 #     }
 # sampling.sampling(config=config, data_types=["val", "test"])
 

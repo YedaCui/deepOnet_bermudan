@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from .utils import *
 import os
+import ray
 
 
 class Data_Bermudan(Dataset):
@@ -63,6 +64,12 @@ class Data_Bermudan(Dataset):
 
 class Data_Saved(Dataset):
     def __init__(self, path, n_batches=None, iter_all=True):
+        gpu_ids = ray.get_gpu_ids()
+        if gpu_ids:
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
+
         self.data_dir = path
         self.file_list = sorted(os.listdir(self.data_dir))
         self._idx = 0
@@ -77,7 +84,7 @@ class Data_Saved(Dataset):
     
     def __getitem__(self, idx):
         file_path = os.path.join(self.data_dir, self.file_list[self._idx])
-        data = torch.load(file_path)
+        data = torch.load(file_path, map_location=self.device)
         self._idx += 1
         self._idx = 0 if self._idx == len(self.file_list) else self._idx
         if not self.iter_all:

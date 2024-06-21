@@ -221,12 +221,12 @@ class KolmogorovNet(torch.nn.Module):
             if self.bermudan.option_type == "call":
                 dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(sensor.reshape(1,-1) - batch["K"]))
             else:
-                print("device of  cont_value :")
-                print(cont_value.device)
-                print("device of  K :")
-                print(batch["K"].device)
-                print("device of  payoff :")
-                print(sensor.device)
+                # print("device of  cont_value :")
+                # print(cont_value.device)
+                # print("device of  K :")
+                # print(batch["K"].device)
+                # print("device of  payoff :")
+                # print(sensor.device)
                 dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(batch["K"]-sensor.reshape(1,-1)))
         
         with torch.no_grad():
