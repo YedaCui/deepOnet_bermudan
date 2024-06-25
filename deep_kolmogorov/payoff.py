@@ -68,13 +68,13 @@ class GRF(FunctionSpace):
             "quadratic", or "cubic".
     """
 
-    def __init__(self, sensor, kernel="RBF", length_scale=10):
+    def __init__(self, sensor, kernel="RBF", length_scale=10, var_scale=1):
         self.x = sensor.reshape(-1,1)
         self.N = self.x.shape[0]
         if kernel == "RBF":
-            K = gp.kernels.RBF(length_scale=length_scale)
+            K = var_scale * gp.kernels.RBF(length_scale=length_scale)
         elif kernel == "AE":
-            K = gp.kernels.Matern(length_scale=length_scale, nu=0.5)
+            K = var_scale * gp.kernels.Matern(length_scale=length_scale, nu=0.5)
         self.K = K(self.x)
         self.L = np.linalg.cholesky(self.K + 1e-13 * np.eye(self.N))
 
