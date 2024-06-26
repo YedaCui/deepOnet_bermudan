@@ -60,7 +60,7 @@ def CN_bermudan_1D(cpflag, K, T, num_ex, vol, r, d, N = 2000, x_max=3, S0=10):
 
     mu = (r-d-0.5*vol*vol)
     #number of time steps
-    J = 1000
+    J = int((int(1000/num_ex) + 1) * num_ex)
     dt = T/J
     dJ = int(J/num_ex)
     
