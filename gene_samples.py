@@ -174,9 +174,10 @@ import torch
 # config = {
 #         "pde": "BSr",
 #         "payoff": "GRF",
-#         "sensor": torch.exp(torch.linspace(-4, 2.1, 100)),
+#         "sensor": torch.exp(torch.linspace(-4, 4.4, 100)),
 #         "kernel": "RBF",
-#         "length_scale":10,
+#         "length_scale": 10,
+#         "var_scale": 2,
 #         "bermudan": "Bermudan_1D",
 #         "T": 1,
 #         "num_ex": 2,
@@ -191,16 +192,17 @@ import torch
 #         "n_test_batches": 1000,
 #         "n_val_batches": 1000,
 #         "size_sensor": 100,
-#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_max_2.1"
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_max_4.4_var_scale_2"
 #     }
-# sampling.sampling(config=config, device="cuda:1")
+# sampling.sampling(config=config, device="cuda:0")
 
 # config = {
 #         "pde": "BSr",
 #         "payoff": "GRF",
-#         "sensor": torch.exp(torch.linspace(-4, 1.6, 100)),
+#         "sensor": torch.exp(torch.linspace(-4, 4.4, 100)),
 #         "kernel": "RBF",
-#         "length_scale":10,
+#         "length_scale": 10,
+#         "var_scale": 3,
 #         "bermudan": "Bermudan_1D",
 #         "T": 1,
 #         "num_ex": 2,
@@ -215,39 +217,39 @@ import torch
 #         "n_test_batches": 1000,
 #         "n_val_batches": 1000,
 #         "size_sensor": 100,
-#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_max_1.6"
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_max_4.4_var_scale_3"
 #     }
-# sampling.sampling(config=config, device="cuda:2")
+# sampling.sampling(config=config, device="cuda:0")
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.exp(torch.linspace(-4, 4.4, 100)),
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 5,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 2,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 3*2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "size_sensor": 100,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_max_4.4_var_scale_5"
+#     }
+# sampling.sampling(config=config, device="cuda:1")
 
 config = {
         "pde": "BSr",
         "payoff": "GRF",
-        "sensor": torch.exp(torch.linspace(-4, 1.6, 100)),
-        "kernel": "RBF",
-        "length_scale": 10,
-        "var_scale": 2,
-        "bermudan": "Bermudan_1D",
-        "T": 1,
-        "num_ex": 2,
-        "option_type": "put",
-        "output_params": ["x",  "r", "q", "sigma", "K"],
-        "frezed_params": {"t":0},
-        "interp_method": "linear",
-        "bs_train": 10000,
-        "bs_test": 100,
-        "bs_val": 100,
-        "n_train_batches": 3*2000,
-        "n_test_batches": 1000,
-        "n_val_batches": 1000,
-        "size_sensor": 100,
-        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_max_1.6_var_scale_2"
-    }
-sampling.sampling(config=config, device="cuda:0")
-
-config = {
-        "pde": "BSr",
-        "payoff": "GRF",
-        "sensor": torch.exp(torch.linspace(-4, 1.6, 100)),
+        "sensor": torch.exp(torch.linspace(-4, 4.4, 100)),
         "kernel": "RBF",
         "length_scale": 10,
         "var_scale": 0.5,
@@ -265,6 +267,6 @@ config = {
         "n_test_batches": 1000,
         "n_val_batches": 1000,
         "size_sensor": 100,
-        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_max_1.6_var_scale_0.5"
+        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_max_4.4_var_scale_0.5"
     }
-sampling.sampling(config=config, device="cuda:0")
+sampling.sampling(config=config, device="cuda:2")
