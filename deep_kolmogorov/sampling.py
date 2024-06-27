@@ -17,7 +17,7 @@ def sampling(config, device="cuda", data_types=["train", "val", "test"]):
     )
     pde = PDES[config["pde"]](**pde_kwargs)
     payoff_kwargs = {
-        _arg: config[_arg] for _arg in ["sensor", "kernel", "length_scale"] if _arg in config.keys()
+        _arg: config[_arg] for _arg in ["sensor", "kernel", "length_scale", "var_scale"] if _arg in config.keys()
         }
     payoff = PAYOFFS[config["payoff"]](**payoff_kwargs)
     bermudan = BERMUDANS[config["bermudan"]](pde, payoff, config)

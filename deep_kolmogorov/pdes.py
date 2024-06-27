@@ -294,7 +294,7 @@ HYPERCUBES["black_scholes_r"] = {
     "t": Hypercube(interval=[0.0, 1.0]),
     "s": Hypercube(interval=[9.0, 10.0]),
     "r": Hypercube(interval=[0.005, 0.08]),
-    "q": Hypercube(interval=[0.00,0.05]),
+    "q": Hypercube(interval=[0.005,0.25]),
     "sigma": Hypercube(interval=[0.1, 0.6]),
     "kappa": Hypercube(interval=[0.8, 1.2]),
 }

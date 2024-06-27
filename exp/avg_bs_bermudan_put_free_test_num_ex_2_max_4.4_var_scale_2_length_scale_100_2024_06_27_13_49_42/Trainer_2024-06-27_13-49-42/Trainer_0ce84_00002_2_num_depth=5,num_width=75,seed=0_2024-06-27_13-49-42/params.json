@@ -1,0 +1,53 @@
+{
+  "T": 1,
+  "bermudan": "Bermudan_1D",
+  "bs_test": 100,
+  "bs_train": 10000,
+  "checkpoint": true,
+  "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_max_4.4_var_scale_2_length_scale_100",
+  "factor": 6,
+  "frezed_params": {
+    "t": 0
+  },
+  "gpus": 1,
+  "interp_method": "linear",
+  "kernel": "RBF",
+  "length_scale": 100,
+  "levels": 4,
+  "lr": 0.01,
+  "lr_decay": 0.25,
+  "lr_decay_patience": 2,
+  "min_lr": 1e-08,
+  "mode": "avg_bs_bermudan_put_free_test_num_ex_2_max_4.4_var_scale_2_length_scale_100",
+  "n_iterations": 30,
+  "n_test_batches": 1000,
+  "n_train_batches": 2000,
+  "net": "DeepONet",
+  "norm_layer": "layernorm",
+  "num_depth": 5,
+  "num_ex": 2,
+  "num_width": 75,
+  "opt": "adamw",
+  "option_type": "put",
+  "output_params": [
+    "x",
+    "r",
+    "q",
+    "sigma",
+    "K"
+  ],
+  "payoff": "GRF",
+  "pde": "BSr",
+  "seed": 0,
+  "sensor": "tensor([1.8316e-02, 1.9938e-02, 2.1703e-02, 2.3625e-02, 2.5717e-02, 2.7994e-02,\n        3.0473e-02, 3.3172e-02, 3.6109e-02, 3.9307e-02, 4.2787e-02, 4.6576e-02,\n        5.0701e-02, 5.5190e-02, 6.0077e-02, 6.5397e-02, 7.1188e-02, 7.7492e-02,\n        8.4354e-02, 9.1824e-02, 9.9955e-02, 1.0881e-01, 1.1844e-01, 1.2893e-01,\n        1.4035e-01, 1.5278e-01, 1.6630e-01, 1.8103e-01, 1.9706e-01, 2.1451e-01,\n        2.3351e-01, 2.5418e-01, 2.7669e-01, 3.0119e-01, 3.2787e-01, 3.5690e-01,\n        3.8850e-01, 4.2291e-01, 4.6035e-01, 5.0112e-01, 5.4550e-01, 5.9380e-01,\n        6.4638e-01, 7.0362e-01, 7.6593e-01, 8.3375e-01, 9.0758e-01, 9.8795e-01,\n        1.0754e+00, 1.1707e+00, 1.2743e+00, 1.3872e+00, 1.5100e+00, 1.6437e+00,\n        1.7893e+00, 1.9477e+00, 2.1202e+00, 2.3080e+00, 2.5123e+00, 2.7348e+00,\n        2.9770e+00, 3.2406e+00, 3.5276e+00, 3.8399e+00, 4.1800e+00, 4.5501e+00,\n        4.9530e+00, 5.3916e+00, 5.8691e+00, 6.3888e+00, 6.9545e+00, 7.5704e+00,\n        8.2407e+00, 8.9705e+00, 9.7648e+00, 1.0630e+01, 1.1571e+01, 1.2595e+01,\n        1.3711e+01, 1.4925e+01, 1.6247e+01, 1.7685e+01, 1.9251e+01, 2.0956e+01,\n        2.2812e+01, 2.4832e+01, 2.7031e+01, 2.9424e+01, 3.2030e+01, 3.4866e+01,\n        3.7954e+01, 4.1314e+01, 4.4973e+01, 4.8955e+01, 5.3290e+01, 5.8009e+01,\n        6.3146e+01, 6.8738e+01, 7.4825e+01, 8.1451e+01])",
+  "size_sensor": 100,
+  "size_t_x_u": [
+    0,
+    1,
+    4
+  ],
+  "unfreeze": "all",
+  "unfreeze_patience": 1,
+  "var_scale": 2,
+  "weight_decay": 0.01
+}
