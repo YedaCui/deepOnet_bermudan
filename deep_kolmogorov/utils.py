@@ -90,5 +90,20 @@ def CN_bermudan_1D(cpflag, K, T, num_ex, vol, r, d, N = 2000, x_max=3, S0=10):
             V = torch.where(V>V0,V,V0)
     return S0*torch.exp(X), V.squeeze(-1)
 
+
+def MP_grid(a=0.01, s=10, b=80, g1=10, g2=5, n=50):
+    n = n//2
+    c1 = np.arcsinh((a - s) / g1)
+    c2 = np.arcsinh((b - s) / g2)
+    
+    linspace1 = np.linspace(1, n, num=n)
+    linspace2 = linspace1 / n  # create a linear space from 1/n to 1
+    linspace3 = (n - linspace1) / (n - 1)  # create a linear space from 0 to 1, adjusted for indexing from 1
+    
+    Gblock1 = s + g1 * np.sinh(c1 * linspace3)
+    Gblock2 = s + g2 * np.sinh(c2 * linspace2)
+    
+    Gblock = np.concatenate([Gblock1, Gblock2],axis=0)
+    return Gblock
     
 

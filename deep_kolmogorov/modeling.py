@@ -192,10 +192,12 @@ class KolmogorovNet(torch.nn.Module):
                 [batch["payoff"],
                  self.bermudan.pde.normalize_and_flatten(batch, self.bermudan.output_params)], dim = 1
             )
+            tensor = tensor.float()
         if train:
             y_pred = self.net.forward(tensor)
         else:
             y_pred = self.price_bermudan(batch)
+        print(y_pred.shape[0])
         return {"bermudan": y, "net": y_pred}
     
     def price_bermudan(self, batch):

@@ -1,0 +1,25 @@
+Failure # 1 (occurred at 2024-07-01_19-06-13)
+[36mray::Trainer.train()[39m (pid=256135, ip=137.189.58.22, actor_id=3e192cafa2118128d1ae8ba701000000, repr=<deep_kolmogorov.trainer.Trainer object at 0x7f6f4f7d0fd0>)
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/ray/tune/trainable/trainable.py", line 375, in train
+    raise skipped from exception_cause(skipped)
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/ray/tune/trainable/trainable.py", line 372, in train
+    result = self.step()
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/trainer.py", line 124, in step
+    train_scores = self._train_loop()
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/trainer.py", line 142, in _train_loop
+    for i, batch in enumerate(self.train_loader):
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 652, in __next__
+    data = self._next_data()
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 692, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/utils/data/_utils/fetch.py", line 51, in fetch
+    data = self.dataset[possibly_batched_index]
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/bermudan.py", line 87, in __getitem__
+    data = torch.load(file_path, map_location=self.device)
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/serialization.py", line 699, in load
+    with _open_file_like(f, 'rb') as opened_file:
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/serialization.py", line 230, in _open_file_like
+    return _open_file(name_or_buffer, mode)
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/serialization.py", line 211, in __init__
+    super(_open_file, self).__init__(open(name, mode))
+FileNotFoundError: [Errno 2] No such file or directory: '/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_12_qmax_0.05_sensor_type_MP_num_sensor_50/train/train_764.pt'

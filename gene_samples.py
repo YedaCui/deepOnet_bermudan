@@ -1,4 +1,5 @@
 from deep_kolmogorov import sampling
+from deep_kolmogorov import utils
 import torch
 
 # config = {
@@ -375,6 +376,439 @@ import torch
 # sampling.sampling(config=config, device="cuda:1")
 
 
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.exp(torch.linspace(-4, 4.4, 50)),
+#         "size_sensor": 50,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 2,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 3*2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_num_sensor_50"
+#     }
+# sampling.sampling(config=config, device="cuda:0", data_types=["val", "test"])
+
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.linspace(0.01,80,100),
+#         "size_sensor": 100,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 2,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 3*2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_num_sensor_100_uniform"
+#     }
+# sampling.sampling(config=config, device="cuda:2")
+
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.linspace(0.01,80,200),
+#         "size_sensor": 200,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 2,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 3*2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_num_sensor_200_uniform"
+#     }
+# sampling.sampling(config=config, device="cuda:1")
+
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.linspace(0.01,80,50),
+#         "size_sensor": 50,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 2,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 3*2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_num_sensor_50_uniform"
+#     }
+# sampling.sampling(config=config, device="cuda:0")
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": 10*torch.exp(torch.linspace(-2.1,2.1, 100)),
+#         "size_sensor": 100,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 2,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_sensor_type_expuni_num_sensor_100"
+#     }
+# sampling.sampling(config=config, device="cuda:2")
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.from_numpy(utils.MP_grid(n=100)),
+#         "size_sensor": 100,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 2,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_sensor_type_MP_num_sensor_100"
+#     }
+# sampling.sampling(config=config, device="cuda:2")
+
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": 10*torch.exp(torch.linspace(-2.1,2.1, 200)),
+#         "size_sensor": 200,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 2,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_sensor_type_expuni_num_sensor_200"
+#     }
+# sampling.sampling(config=config, device="cuda:1")
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.from_numpy(utils.MP_grid(n=200)),
+#         "size_sensor": 200,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 2,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_sensor_type_MP_num_sensor_200"
+#     }
+# sampling.sampling(config=config, device="cuda:1")
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": 10*torch.exp(torch.linspace(-2.1,2.1, 50)),
+#         "size_sensor": 50,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 2,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_sensor_type_expuni_num_sensor_50"
+#     }
+# sampling.sampling(config=config, device="cuda:0")
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.from_numpy(utils.MP_grid(n=50)),
+#         "size_sensor": 50,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 2,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_sensor_type_MP_num_sensor_50"
+#     }
+# sampling.sampling(config=config, device="cuda:0")
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.from_numpy(utils.MP_grid(n=50)),
+#         "size_sensor": 50,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 4,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_4_qmax_0.05_sensor_type_MP_num_sensor_50"
+#     }
+# sampling.sampling(config=config, device="cuda:0")
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.from_numpy(utils.MP_grid(n=50,g1=50,g2=50)).float(),
+#         "size_sensor": 50,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 12,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 2000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_12_qmax_0.05_sensor_type_MP_num_sensor_50"
+#     }
+# sampling.sampling(config=config, device="cuda:1", data_types=["test"])
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.from_numpy(utils.MP_grid(n=100,g1=50,g2=50)).float(),
+#         "size_sensor": 100,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 12,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 2000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_12_qmax_0.05_sensor_type_MP_num_sensor_100"
+#     }
+# sampling.sampling(config=config, device="cuda:2")
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.from_numpy(utils.MP_grid(n=200,g1=50,g2=50)).float(),
+#         "size_sensor": 200,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 12,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 2000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_12_qmax_0.05_sensor_type_MP_num_sensor_200"
+#     }
+# sampling.sampling(config=config, device="cuda:1")
+
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.from_numpy(utils.MP_grid(n=50)).float(),
+#         "size_sensor": 50,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 52,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_52_qmax_0.05_sensor_type_MP_num_sensor_50"
+#     }
+# sampling.sampling(config=config, device="cuda:2")
+
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.exp(torch.linspace(-4, 4.4, 100)),
+#         "size_sensor": 100,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 12,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 1000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_12_qmax_0.05_num_sensor_100"
+#     }
+# sampling.sampling(config=config, device="cuda:2")
+
+
+# config = {
+#         "pde": "BSr",
+#         "payoff": "GRF",
+#         "sensor": torch.exp(torch.linspace(-4, 4.4, 200)),
+#         "size_sensor": 200,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "bermudan": "Bermudan_1D",
+#         "T": 1,
+#         "num_ex": 12,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 1000,
+#         "bs_test": 100,
+#         "bs_val": 100,
+#         "n_train_batches": 3*2000,
+#         "n_test_batches": 1000,
+#         "n_val_batches": 1000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_12_qmax_0.05_num_sensor_200"
+#     }
+# sampling.sampling(config=config, device="cuda:1")
+
+
 config = {
         "pde": "BSr",
         "payoff": "GRF",
@@ -385,17 +819,17 @@ config = {
         "var_scale": 1,
         "bermudan": "Bermudan_1D",
         "T": 1,
-        "num_ex": 2,
+        "num_ex": 12,
         "option_type": "put",
         "output_params": ["x",  "r", "q", "sigma", "K"],
         "frezed_params": {"t":0},
         "interp_method": "linear",
-        "bs_train": 10000,
+        "bs_train": 1000,
         "bs_test": 100,
         "bs_val": 100,
-        "n_train_batches": 3*2000,
+        "n_train_batches": 2000,
         "n_test_batches": 1000,
         "n_val_batches": 1000,
-        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_num_sensor_50"
+        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_12_qmax_0.05_num_sensor_50"
     }
-sampling.sampling(config=config, device="cuda:1")
+sampling.sampling(config=config, device="cuda:0")

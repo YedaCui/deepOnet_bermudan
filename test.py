@@ -1,30 +1,33 @@
 from deep_kolmogorov import trainer
 import torch
+from deep_kolmogorov import utils
 
-config =  {
+config = {
         "seed": 0,
-        "gpus":1,
         "checkpoint": True,
         "pde": "BSr",
         "net": "DeepONet",
         "payoff": "GRF",
-        "sensor": torch.exp(torch.linspace(-4, 5, 100)),
+        "sensor": torch.from_numpy(utils.MP_grid(n=50)).float(),
+        "size_sensor": 50,
         "kernel": "RBF", 
         "length_scale":10,
+        "var_scale":1,
         "bermudan": "Bermudan_1D",
         "T": 1,
-        "num_ex": 1,
+        "num_ex": 2,
         "option_type": "put",
-        "output_params": ["x"],
-        "frezed_params": {"t":0, "r": 0.025, "q":0.05, "sigma":0.3, "kappa": 1},
+        "output_params": ["x", "r", "q", "sigma", "K"],
+        "frezed_params": {"t":0},
         "interp_method": "linear",
         "opt": "adamw",
         "bs_train": 10000,
         "bs_test": 100,
         # "n_train_batches": 2000,
         # "n_test_batches": 1000,
-        "n_train_batches": 2,
-        "n_test_batches": 2,
+        "n_train_batches": 3,
+        "n_test_batches": 3,
+        "accu_steps": 1,
         "lr": 0.01,
         "min_lr": 1e-8,
         "lr_decay": 0.25,
@@ -32,15 +35,17 @@ config =  {
         "weight_decay": 0.01,
         "unfreeze": "all",
         "unfreeze_patience": 1,
-        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/frezed_test_with_num_ex_1",
-        # "data_path": None,
+        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_sensor_type_MP_num_sensor_50",
         "n_iterations": 30,
-        "size_t_x_u": [0,1,0],
-        "size_sensor": 100,
+        "size_t_x_u": [0,1,4],
+        "gpus":0,
         "num_width" : 35,
         "num_depth" : 5,
     }
 
 mytrainer = trainer.Trainer(config)
 
-mytrainer.step()
+
+for i in range(10):
+    mytrainer._iteration += 1
+    mytrainer.step()

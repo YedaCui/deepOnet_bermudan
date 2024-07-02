@@ -1,0 +1,53 @@
+{
+  "T": 1,
+  "bermudan": "Bermudan_1D",
+  "bs_test": 100,
+  "bs_train": 10000,
+  "checkpoint": true,
+  "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_2_qmax_0.05_num_sensor_50_uniform",
+  "factor": 6,
+  "frezed_params": {
+    "t": 0
+  },
+  "gpus": 1,
+  "interp_method": "linear",
+  "kernel": "RBF",
+  "length_scale": 10,
+  "levels": 4,
+  "lr": 0.01,
+  "lr_decay": 0.25,
+  "lr_decay_patience": 2,
+  "min_lr": 1e-08,
+  "mode": "avg_bs_bermudan_put_free_test_num_ex_2_qmax_0.05_num_sensor_50_uniform",
+  "n_iterations": 30,
+  "n_test_batches": 1000,
+  "n_train_batches": 2000,
+  "net": "DeepONet",
+  "norm_layer": "layernorm",
+  "num_depth": 5,
+  "num_ex": 2,
+  "num_width": 150,
+  "opt": "adamw",
+  "option_type": "put",
+  "output_params": [
+    "x",
+    "r",
+    "q",
+    "sigma",
+    "K"
+  ],
+  "payoff": "GRF",
+  "pde": "BSr",
+  "seed": 0,
+  "sensor": "tensor([1.0000e-02, 1.6424e+00, 3.2749e+00, 4.9073e+00, 6.5398e+00, 8.1722e+00,\n        9.8047e+00, 1.1437e+01, 1.3070e+01, 1.4702e+01, 1.6334e+01, 1.7967e+01,\n        1.9599e+01, 2.1232e+01, 2.2864e+01, 2.4497e+01, 2.6129e+01, 2.7762e+01,\n        2.9394e+01, 3.1027e+01, 3.2659e+01, 3.4291e+01, 3.5924e+01, 3.7556e+01,\n        3.9189e+01, 4.0821e+01, 4.2454e+01, 4.4086e+01, 4.5719e+01, 4.7351e+01,\n        4.8983e+01, 5.0616e+01, 5.2248e+01, 5.3881e+01, 5.5513e+01, 5.7146e+01,\n        5.8778e+01, 6.0411e+01, 6.2043e+01, 6.3676e+01, 6.5308e+01, 6.6940e+01,\n        6.8573e+01, 7.0205e+01, 7.1838e+01, 7.3470e+01, 7.5103e+01, 7.6735e+01,\n        7.8368e+01, 8.0000e+01])",
+  "size_sensor": 50,
+  "size_t_x_u": [
+    0,
+    1,
+    4
+  ],
+  "unfreeze": "all",
+  "unfreeze_patience": 1,
+  "var_scale": 1,
+  "weight_decay": 0.01
+}

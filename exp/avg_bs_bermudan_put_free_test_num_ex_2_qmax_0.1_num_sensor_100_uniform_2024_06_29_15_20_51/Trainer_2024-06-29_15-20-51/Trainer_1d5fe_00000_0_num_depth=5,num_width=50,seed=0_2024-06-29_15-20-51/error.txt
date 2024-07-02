@@ -1,0 +1,8 @@
+Failure # 1 (occurred at 2024-06-29_17-16-17)
+The actor died unexpectedly before finishing this task.
+	class_name: Trainer
+	actor_id: 722ac4be903b6a1c62a37ed001000000
+	pid: 270170
+	namespace: c2610b78-fd1f-4f62-a747-815ff561c872
+	ip: 137.189.58.22
+The actor is dead because its worker process has died. Worker exit type: SYSTEM_ERROR Worker exit detail: Worker unexpectedly exits with a connection error code 2. End of file. There are some potential root causes. (1) The process is killed by SIGKILL by OOM killer due to high memory usage. (2) ray stop --force is called. (3) The worker is crashed unexpectedly due to SIGSEGV or other unexpected errors.
