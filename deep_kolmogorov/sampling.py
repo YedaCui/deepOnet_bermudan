@@ -24,7 +24,7 @@ def sampling(config, device="cuda", data_types=["train", "val", "test"]):
     bermudan = BERMUDANS[config["bermudan"]](pde, payoff, config)
 
     dt_loaders = {
-        _data_type: bermudan.dataloader(config[f"bs_{_data_type}"], config[f"n_{_data_type}_batches"], config["frezed_params"], config["interp_method"])
+        _data_type: bermudan.dataloader(config[f"bs_{_data_type}"], config[f"n_{_data_type}_batches"], config["frezed_params"], config["interp_method"],config["var_rescale"], config["var_rescale_k"])
         for _data_type in data_types
     }
 

@@ -109,6 +109,25 @@ class DeepONet(BaseNet):
         value = torch.sum(br * tr, dim=-1, keepdim=True)
         return value
 
+class DNN(BaseNet):
+    """
+    The FNN with batch normalization.
+    """
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.size_sensor = config["size_sensor"]
+        self.size_t, self.size_x, self.size_u = self.config["size_t_x_u"]
+        self.size_input = self.size_t + self.size_x + self.size_u + self.size_sensor
+        self.net = DenseNet([self.size_input] + [self.config["num_width"]] * self.config["num_depth"] + [1])
+
+
+    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
+        """
+        The input of state can be either 3-dim or 4-dim but once fixed a problem the
+        dimension of the input tensor is fixed.
+        """
+        return self.net(tensor)
 
 
 class DenseOperator(nn.Module):
@@ -192,7 +211,7 @@ class KolmogorovNet(torch.nn.Module):
                 [batch["payoff"],
                  self.bermudan.pde.normalize_and_flatten(batch, self.bermudan.output_params)], dim = 1
             )
-            tensor = tensor.float()
+            # tensor = tensor.float()
         if train:
             y_pred = self.net.forward(tensor)
         else:

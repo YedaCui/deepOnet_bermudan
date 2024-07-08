@@ -6,7 +6,7 @@ import ray
 
 
 class Data_Bermudan(Dataset):
-    def __init__(self, pde, payoff, T, num_ex, option_type, batch_size, n_batches, frezed_params, interp_method):
+    def __init__(self, pde, payoff, T, num_ex, option_type, batch_size, n_batches, frezed_params, interp_method, var_rescale=False, var_rescale_k=1):
         self.pde = pde
         self.payoff = payoff
         self.batch_size = batch_size
@@ -16,6 +16,8 @@ class Data_Bermudan(Dataset):
         self.num_ex = num_ex
         self.option_type = option_type
         self.interp_method = interp_method
+        self.var_rescale = var_rescale
+        self.var_rescale_k = var_rescale_k
 
     
     def __len__(self):
@@ -39,7 +41,10 @@ class Data_Bermudan(Dataset):
                 cont_value = torch.zeros(1,1, device=device)
             else:
                 cont_value = self.pde.option_price(self.T - dt_pde["t"], self.payoff.x.reshape(1,-1), dt_pde["sigma"], dt_pde["r"], dt_pde["q"], dt_pde["K"], option_type=self.option_type)
-                cont_value += torch.from_numpy(self.payoff.random(cont_value.shape[0]))
+                if self.var_rescale == True:
+                    cont_value += self.var_rescale_k * (self.T - (i+1)*self.T/self.num_ex) * torch.from_numpy(self.payoff.random(cont_value.shape[0]))
+                else:
+                    cont_value += torch.from_numpy(self.payoff.random(cont_value.shape[0]))
             if self.option_type == "call":
                 dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(self.payoff.x.reshape(1,-1)-dt_pde["K"]))
             else:
@@ -101,9 +106,9 @@ class Bermudan():
         self.option_type = config["option_type"]
         self.output_params = config["output_params"]
 
-    def dataloader(self, batch_size, n_batches, frezed_params, interp_method):
+    def dataloader(self, batch_size, n_batches, frezed_params, interp_method, var_rescale=False, var_rescale_k=1):
         return DataLoader(
-            Data_Bermudan(self.pde, self.payoff, self.T, self.num_ex, self.option_type, batch_size, n_batches, frezed_params, interp_method), None
+            Data_Bermudan(self.pde, self.payoff, self.T, self.num_ex, self.option_type, batch_size, n_batches, frezed_params, interp_method, var_rescale, var_rescale_k), None
         )
 
     def solution(self, batch):
