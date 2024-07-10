@@ -127,17 +127,17 @@ class Bermudan_1D(Bermudan):
 
     def solution(self, batch):
         N = int(batch["x"].shape[0] / self.num_ex)
+        batch_x = batch["x"].clone() # store the batch["x"]
         batch = {
             _param: batch[_param][:N] for _param in batch.keys()
         }
         
         grid, values = CN_bermudan_1D(cpflag=self.option_type, K=batch["K"].flatten(), T=self.T, num_ex=self.num_ex, 
                         vol=batch["sigma"].flatten(), r=batch["r"].flatten(), d=batch["q"].flatten())
+        
+        res = [parallel_interpolation(batch_x[N*i:N*(i+1),:], grid, values[i], interp_method="linear") for i in range(self.num_ex)]
+        return torch.concat(res, dim=-1)
 
-        return parallel_interpolation(batch["x"], grid, values, interp_method="linear")
-        
 
-        
-        
 BERMUDANS = {bermudan.__name__: bermudan for bermudan in Bermudan.get_subclasses()}
 

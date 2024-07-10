@@ -156,6 +156,24 @@ class KernelOperator(DenseOperator):
         x = nn.functional.relu(self.conv2(x))
         return super(KernelOperator, self).forward(x)
     
+class DNNKernel(BaseNet):
+    def __init__(self, config):
+        super().__init__(config)
+        self.size_sensor = config["size_sensor"]
+        self.in_channels = 1
+        self.num_outputs = config["num_outputs"]
+        self.kernel = KernelOperator(self.in_channels, config["out_channels"], config["kernel_size"], self.num_outputs)
+        self.size_t, self.size_x, self.size_u = self.config["size_t_x_u"]
+        self.size_input = self.size_t + self.size_x + self.size_u + self.num_outputs
+        self.net = DenseNet([self.size_input] + [self.config["num_width"]] * self.config["num_depth"] + [1])
+
+    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
+        sensor_tensor, t_x_u_tensor = tensor[:, 0:self.size_sensor], tensor[:, self.size_sensor:]
+        encod_sensor_tensor = self.kernel(sensor_tensor.reshape(sensor_tensor.shape[0], self.in_channels, -1))
+
+        inputs_for_DNN = torch.concat([encod_sensor_tensor, t_x_u_tensor], dim=-1)
+        return self.net(inputs_for_DNN)
+
 
 class DeepKernelONet(DeepONet):
     def __init__(self, config):
@@ -194,7 +212,7 @@ class KolmogorovNet(torch.nn.Module):
         self.bermudan = bermudan
         self.saved_data = saved_data
 
-    def forward(self, batch, train=True):
+    def forward(self, batch, train=True, ini=False):
         if batch["x"].ndim == 3:
             batch = {
             _k: _v.squeeze(0) for _k, _v in batch.items()
@@ -217,14 +235,20 @@ class KolmogorovNet(torch.nn.Module):
         else:
             y_pred = self.price_bermudan(batch)
         print(y_pred.shape[0])
-        return {"bermudan": y, "net": y_pred}
+        if ini:
+            return {"bermudan": y[:,[0]], "net": y_pred[:,[0]]}
+        else:
+            return {"bermudan": y, "net": y_pred}
     
     def price_bermudan(self, batch):
         sensor = self.bermudan.payoff.x.to(batch["x"].device)
         N = int(batch["x"].shape[0] / self.bermudan.num_ex)
+        batch_x = batch["x"].clone() # store the batch["x"]
         batch = {
             _param: batch[_param][:N] for _param in batch.keys()
         }
+
+        res = []
         for i in range(self.bermudan.num_ex, 0, -1):
             if i == self.bermudan.num_ex:
                 cont_value = torch.zeros(1,1, device=batch["t"].device)
@@ -242,21 +266,16 @@ class KolmogorovNet(torch.nn.Module):
             if self.bermudan.option_type == "call":
                 dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(sensor.reshape(1,-1) - batch["K"]))
             else:
-                # print("device of  cont_value :")
-                # print(cont_value.device)
-                # print("device of  K :")
-                # print(batch["K"].device)
-                # print("device of  payoff :")
-                # print(sensor.device)
                 dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(batch["K"]-sensor.reshape(1,-1)))
-        
-        with torch.no_grad():
-            tensor = torch.concat(
-                [dt_payoff,
-                self.bermudan.pde.normalize_and_flatten(batch, self.bermudan.output_params)], dim = 1
-            )
-            res = self.net.forward(tensor)
-        return res
+            
+            batch["x"] = batch_x[N*(i-1):N*i,:]
+            with torch.no_grad():
+                tensor = torch.concat(
+                    [dt_payoff,
+                    self.bermudan.pde.normalize_and_flatten(batch, self.bermudan.output_params)], dim = 1
+                )
+                res.append(self.net.forward(tensor))
+        return torch.concat(res[::-1], dim=-1)
 
 
         

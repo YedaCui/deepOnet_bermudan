@@ -82,14 +82,16 @@ def CN_bermudan_1D(cpflag, K, T, num_ex, vol, r, d, N = 2000, x_max=3, S0=10):
         V = torch.clamp(K.reshape(-1,1) - S0*torch.exp(X).reshape(1,-1),0,1e10).unsqueeze(1).permute(0,2,1)
     
     V0 = V.clone()
+    Vs = []
     for j in range(1, J+1):
         V = B @ V
         V = Ainv @ V
         # apply early exercise boundary conditions:
         if (j%dJ==0) and j!=J:
+            Vs.append(V.clone().squeeze(-1))
             V = torch.where(V>V0,V,V0)
-    return S0*torch.exp(X), V.squeeze(-1)
-
+    Vs.append(V.clone().squeeze(-1))
+    return S0*torch.exp(X), Vs[::-1]
 
 def MP_grid(a=0.01, s=10, b=80, g1=10, g2=5, n=50):
     n = n//2

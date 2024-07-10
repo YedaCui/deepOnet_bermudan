@@ -76,12 +76,14 @@ class Trainer(tune.Trainable):
         self.train_metr = Metrics()
         self.test_metr = Metrics()
         self.val_metr = Metrics()
+        self.test_metr_ini = Metrics()
+        self.val_metr_ini = Metrics()
         # data
         self.data_path = config["data_path"] # if None, generate data for each iteration.
         if self.data_path:
-            self.train_loader = DataLoader(Data_Saved(os.path.join(self.data_path, "train"), config["n_train_batches"]), None) 
-            self.val_loader = DataLoader(Data_Saved(os.path.join(self.data_path, "val"), config["n_test_batches"]), None)
-            self.test_loader = DataLoader(Data_Saved(os.path.join(self.data_path, "test"), config["n_test_batches"]), None)
+            self.train_loader = DataLoader(Data_Saved(os.path.join(self.data_path, "train"), config["n_train_batches"]), None, num_workers=0)
+            self.val_loader = DataLoader(Data_Saved(os.path.join(self.data_path, "val"), config["n_test_batches"]), None, num_workers=0)
+            self.test_loader = DataLoader(Data_Saved(os.path.join(self.data_path, "test"), config["n_test_batches"]), None, num_workers=0)
         else:
             self.train_loader = self.bermudan.dataloader(config["bs_train"], config["n_train_batches"], config["frezed_params"], config["interp_method"])
             self.test_loader = self.bermudan.dataloader(config["bs_test"], config["n_test_batches"], config["frezed_params"], config["interp_method"])
@@ -89,6 +91,7 @@ class Trainer(tune.Trainable):
             
         # stats
         first_scores_test = self._test_loop()
+        first_scores_test_ini = self._test_ini_loop()
         # try:
         #     first_scores_test = self._test_loop()
         # except RuntimeError as e:
@@ -102,10 +105,13 @@ class Trainer(tune.Trainable):
         #         raise e
 
         first_scores_val = self._val_loop()
+        first_scores_val_ini = self._val_ini_loop()
         self.initial_stats = {
             "params": self.num_net_params,
             "test_initial": first_scores_test["current"],
             "val_initial": first_scores_val["current"],
+            "test_ini_initial": first_scores_test_ini["current"],
+            "val_ini_initial": first_scores_val_ini["current"],
         }
 
     @staticmethod
@@ -125,9 +131,13 @@ class Trainer(tune.Trainable):
         self.net.decay_lr(self.iteration)
         test_scores = self._test_loop()
         val_scores = self._val_loop()
+        test_scores_ini = self._test_ini_loop()
+        val_scores_ini = self._val_ini_loop()
         return {
             "val": val_scores,
             "test": test_scores,
+            "val_ini": val_scores_ini,
+            "test_ini": test_scores_ini,
             "train": train_scores,
             "initial_stats": self.initial_stats,
             "lr_groups": lr_groups,
@@ -161,6 +171,18 @@ class Trainer(tune.Trainable):
                 self.test_metr.store(output)
         return self.test_metr.finalize()
     
+    def _test_ini_loop(self):
+        # test
+        self.model.eval()
+        # zero running metrics
+        self.test_metr_ini.zero()
+        with torch.no_grad():
+            for batch in self.test_loader:
+                # forward and metrics
+                output = self.model.forward(batch, train=False, ini=True)
+                self.test_metr_ini.store(output)
+        return self.test_metr_ini.finalize()
+    
     def _test_greeks_loop(self, greeks=["delta"], method="autodiff", d=0.001):
         # test greeks
         self.test_greeks_metr = {_g:Metrics() for _g in greeks}
@@ -187,6 +209,18 @@ class Trainer(tune.Trainable):
                 output = self.model.forward(batch, train=False)
                 self.val_metr.store(output)
         return self.val_metr.finalize()
+    
+    def _val_ini_loop(self):
+        # test
+        self.model.eval()
+        # zero running metrics
+        self.val_metr_ini.zero()
+        with torch.no_grad():
+            for batch in self.val_loader:
+                # forward and metrics
+                output = self.model.forward(batch, train=False, ini=True)
+                self.val_metr_ini.store(output)
+        return self.val_metr_ini.finalize()
 
     def save_checkpoint(self, checkpoint_dir):
         checkpoint_path = os.path.join(checkpoint_dir, "model.pth")
@@ -1641,18 +1675,18 @@ HYPERCONFIGS = {
         "bs_test": 100,
         # "n_train_batches": 2000,
         # "n_test_batches": 1000,
-        "n_train_batches": 2000,
+        "n_train_batches": 20000,
         "n_test_batches": 1000,
-        "accu_steps": 1,
+        "accu_steps": 10,
         "lr": 0.01,
         "min_lr": 1e-8,
-        "lr_decay": 0.5,
-        "lr_decay_patience": 4,
+        "lr_decay": 0.25,
+        "lr_decay_patience": 2,
         "weight_decay": 0.01,
         "unfreeze": "all",
         "unfreeze_patience": 1,
         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_12_qmax_0.05_sensor_type_MP_num_sensor_50",
-        "n_iterations": 60,
+        "n_iterations": 30,
         "size_t_x_u": [0,1,4],
         "num_width" : tune.grid_search([35, 55, 75]),
         "num_depth" : tune.grid_search([5]),
@@ -1680,18 +1714,18 @@ HYPERCONFIGS = {
         "bs_test": 100,
         # "n_train_batches": 2000,
         # "n_test_batches": 1000,
-        "n_train_batches": 2000,
+        "n_train_batches": 20000,
         "n_test_batches": 1000,
-        "accu_steps": 1,
+        "accu_steps": 10,
         "lr": 0.01,
         "min_lr": 1e-8,
-        "lr_decay": 0.5,
-        "lr_decay_patience": 4,
+        "lr_decay": 0.25,
+        "lr_decay_patience": 2,
         "weight_decay": 0.01,
         "unfreeze": "all",
         "unfreeze_patience": 1,
         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_12_qmax_0.05_sensor_type_MP_num_sensor_100",
-        "n_iterations": 60,
+        "n_iterations": 30,
         "size_t_x_u": [0,1,4],
         "num_width" : tune.grid_search([35, 55, 75]),
         "num_depth" : tune.grid_search([5]),
@@ -1719,18 +1753,18 @@ HYPERCONFIGS = {
         "bs_test": 100,
         # "n_train_batches": 2000,
         # "n_test_batches": 1000,
-        "n_train_batches": 2000,
+        "n_train_batches": 20000,
         "n_test_batches": 1000,
-        "accu_steps": 1,
+        "accu_steps": 10,
         "lr": 0.01,
         "min_lr": 1e-8,
-        "lr_decay": 0.5,
-        "lr_decay_patience": 4,
+        "lr_decay": 0.25,
+        "lr_decay_patience": 2,
         "weight_decay": 0.01,
         "unfreeze": "all",
         "unfreeze_patience": 1,
         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_12_qmax_0.05_sensor_type_MP_num_sensor_200",
-        "n_iterations": 60,
+        "n_iterations": 30,
         "size_t_x_u": [0,1,4],
         "num_width" : tune.grid_search([35, 55, 75]),
         "num_depth" : tune.grid_search([5]),
@@ -1857,7 +1891,7 @@ HYPERCONFIGS = {
         "seed": tune.grid_search([0]),
         "checkpoint": True,
         "pde": "BSr",
-        "net": "DNN",
+        "net": "DNNKernel",
         "payoff": "GRF",
         "sensor": torch.from_numpy(MP_grid(n=50,g1=50,g2=50)).float(),
         "size_sensor": 50,
@@ -1891,12 +1925,15 @@ HYPERCONFIGS = {
         "size_t_x_u": [0,1,4],
         "num_width" : tune.grid_search([35, 55, 75]),
         "num_depth" : tune.grid_search([5]),
+        "num_outputs": 10, # the output dimension of the embedding net
+        "out_channels": 6,
+        "kernel_size": 15,
     },
     "avg_bs_bermudan_put_free_test_num_ex_12_qmax_0.05_sensor_type_MP_num_sensor_100_var_rescale_2": {
         "seed": tune.grid_search([0]),
         "checkpoint": True,
         "pde": "BSr",
-        "net": "DNN",
+        "net": "DNNKernel",
         "payoff": "GRF",
         "sensor": torch.from_numpy(MP_grid(n=100,g1=50,g2=50)).float(),
         "size_sensor": 100,
@@ -1930,12 +1967,15 @@ HYPERCONFIGS = {
         "size_t_x_u": [0,1,4],
         "num_width" : tune.grid_search([35, 55, 75]),
         "num_depth" : tune.grid_search([5]),
+        "num_outputs": 10, # the output dimension of the embedding net
+        "out_channels": 6,
+        "kernel_size": 15,
     },
     "avg_bs_bermudan_put_free_test_num_ex_12_qmax_0.05_sensor_type_MP_num_sensor_200_var_rescale_2": {
         "seed": tune.grid_search([0]),
         "checkpoint": True,
         "pde": "BSr",
-        "net": "DNN",
+        "net": "DNNKernel",
         "payoff": "GRF",
         "sensor": torch.from_numpy(MP_grid(n=200,g1=50,g2=50)).float(),
         "size_sensor": 200,
@@ -1969,6 +2009,9 @@ HYPERCONFIGS = {
         "size_t_x_u": [0,1,4],
         "num_width" : tune.grid_search([35, 55, 75]),
         "num_depth" : tune.grid_search([5]),
+        "num_outputs": 10, # the output dimension of the embedding net
+        "out_channels": 6,
+        "kernel_size": 15,
     },
 }
 
