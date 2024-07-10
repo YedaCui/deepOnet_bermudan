@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from .utils import *
 import os
+from abc import ABC, abstractmethod
 import ray
 
 
@@ -96,8 +97,9 @@ class Data_Saved(Dataset):
             self._idx = 0 if self._idx == self.n_batches else self._idx
         return data
 
-class Bermudan():
+class Bermudan(ABC):
     def __init__(self, pde, payoff, config):
+        super().__init__()
         self.pde = pde
         self.payoff = payoff
         self.sensor = self.payoff.x
@@ -110,7 +112,8 @@ class Bermudan():
         return DataLoader(
             Data_Bermudan(self.pde, self.payoff, self.T, self.num_ex, self.option_type, batch_size, n_batches, frezed_params, interp_method, var_rescale, var_rescale_k), None
         )
-
+    
+    @abstractmethod
     def solution(self, batch):
         pass
 
@@ -137,6 +140,13 @@ class Bermudan_1D(Bermudan):
         
         res = [parallel_interpolation(batch_x[N*i:N*(i+1),:], grid, values[i], interp_method="linear") for i in range(self.num_ex)]
         return torch.concat(res, dim=-1)
+
+class Bermudan_basket(Bermudan):
+    def __init__(self, pde, payoff, config):
+        super().__init__(pde, payoff, config)
+
+    def solution(self, batch):
+        pass
 
 
 BERMUDANS = {bermudan.__name__: bermudan for bermudan in Bermudan.get_subclasses()}

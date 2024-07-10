@@ -95,7 +95,7 @@ class LSMC:
         x_sim = [batch_sim["s"].clone()]
         batch_sim["t"].fill_(self.dt)
         for _ in range(self.num_ex):
-            x_sim.append(self.pde.get_X(x_sim[-1], batch_sim["r"], batch_sim["q"], batch_sim["sigma"], batch_sim["t"], batch_sim["rho"]))
+            x_sim.append(self.pde.sde(x_sim[-1], batch_sim["r"], batch_sim["q"], batch_sim["sigma"], batch_sim["t"], batch_sim["rho"]))
         x_sim = torch.stack(x_sim, dim=1)
         x_sim = x_sim.reshape(self.num_sim, batch["K"].shape[0], self.num_ex+1, x_sim.shape[-1]).permute(1,0,2,3)
         K = batch_sim["K"].reshape(self.num_sim, batch["K"].shape[0], -1).permute(1,0,2).unsqueeze(2)
