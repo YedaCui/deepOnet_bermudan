@@ -55,22 +55,45 @@ import torch
 from deep_kolmogorov import pdes, lsmc
 
 
-pde = pdes.BSbasketMax()
-d = 3
+pde = pdes.BSbasketAmean()
+d = 5
 regmethod = lsmc.PolynomialReg(2,d)
 T = 1
-num_ex = 2
+num_ex = 4
 num_sim = 1000000
 pde, regmethod, T, num_ex, num_sim
-pricer = lsmc.LSMC(pde, regmethod, T, "put", num_ex, num_sim)
+pricer = lsmc.LSMC(pde, regmethod, T, "call", num_ex, num_sim)
 
-batch= {"s": torch.ones(1,d)*10,
-        "sigma": torch.ones(1,d)*0.3,
-        "t": torch.ones(1,1)*0.025,
-        "r": torch.ones(1,1)*0.025,
-        "q": torch.ones(1,1)*0.025,
-        "K": torch.ones(1,1)*10,
-        "rho": torch.zeros(1,1),
+batch= {# "s": torch.ones(1,d)*100,
+        "s": torch.tensor([[100,150,200,175, 125]]).float(),
+        # "sigma": torch.ones(1,d)*0.2,
+        "sigma": torch.tensor([[0.2,0.3,0.25,0.24,0.15]]).float(),
+        "t": torch.ones(1,1)*0.0,
+        "r": torch.ones(1,1)*0.01,
+        # "q": torch.ones(1,1)*0.1,
+        "q": torch.tensor([[0.03,0.02,0.05,0.0,0.04]]).float(),
+        "rho": torch.ones(1,1)*0.3,
         }
+batch["K"] = torch.mean(batch["s"],dim=-1, keepdim=True)
 
 print(pricer.pricing(batch))
+
+# pde = pdes.BSbasketMax()
+# d = 1
+# regmethod = lsmc.PolynomialReg(3,d)
+# T = 1
+# num_ex = 2
+# num_sim = 100000
+# pde, regmethod, T, num_ex, num_sim
+# pricer = lsmc.LSMC(pde, regmethod, T, "put", num_ex, num_sim)
+
+# batch= {"s": torch.ones(1,d)*10,
+#         "sigma": torch.ones(1,d)*0.3,
+#         "t": torch.ones(1,1)*0.0,
+#         "r": torch.ones(1,1)*0.025,
+#         "q": torch.ones(1,1)*0.0,
+#         "K": torch.ones(1,1)*10,
+#         "rho": torch.zeros(1,1),
+#         }
+
+# print(pricer.pricing(batch))

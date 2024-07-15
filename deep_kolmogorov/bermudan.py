@@ -7,65 +7,102 @@ import ray
 
 
 class Data_Bermudan(Dataset):
-    def __init__(self, pde, payoff, T, num_ex, option_type, batch_size, n_batches, frezed_params, interp_method, var_rescale=False, var_rescale_k=1):
+    def __init__(self, pde, payoff, T, num_ex, option_type, batch_size, n_batches, frezed_params, interp_method, var_rescale=False, var_rescale_k=1, device="cpu"):
         self.pde = pde
+        self.dimension = pde.hypercubes["s"].dims[0]
         self.payoff = payoff
         self.batch_size = batch_size
         self.n_batches = n_batches
         self.frezed_params = frezed_params
         self.T = T
         self.num_ex = num_ex
+        self.dt = self.T/self.num_ex
         self.option_type = option_type
         self.interp_method = interp_method
         self.var_rescale = var_rescale
         self.var_rescale_k = var_rescale_k
+        self.device = device
 
     
     def __len__(self):
         return self.n_batches
-    
+
     def __getitem__(self, idx):
         '''
         idx : useless arg in our case.
         '''
+        
+        dt_pde = next(iter(self.pde.dataloader(self.batch_size, 1, 'train', frezed_params=self.frezed_params))) # generate a batch pdes data of model parameters
 
-        dt_pde = next(iter(self.pde.dataloader(self.batch_size, 1, 'train', frezed_params=self.frezed_params))) # generate a batch pdes data
-        device = dt_pde["t"].device
-        res = {"payoff": [],
-               "y": []
-               }
-        for i in range(self.num_ex):
-            dt_pde["t"].fill_(i*self.T/self.num_ex)
-            dt_pde["x"] = self.pde.get_X(dt_pde)
-            dt_pde["t"] += self.T/self.num_ex
-            if i == self.num_ex-1:
-                cont_value = torch.zeros(1,1, device=device)
-            else:
-                cont_value = self.pde.option_price(self.T - dt_pde["t"], self.payoff.x.reshape(1,-1), dt_pde["sigma"], dt_pde["r"], dt_pde["q"], dt_pde["K"], option_type=self.option_type)
-                if self.var_rescale == True:
-                    cont_value += self.var_rescale_k * (self.T - (i+1)*self.T/self.num_ex) * torch.from_numpy(self.payoff.random(cont_value.shape[0]))
-                else:
-                    cont_value += torch.from_numpy(self.payoff.random(cont_value.shape[0]))
-            if self.option_type == "call":
-                dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(self.payoff.x.reshape(1,-1)-dt_pde["K"]))
-            else:
-                dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(dt_pde["K"]-self.payoff.x.reshape(1,-1)))
+        if torch.cuda.is_available():
+            dt_pde = {_k: _v.to(self.device) for _k, _v in dt_pde.items()}
+
+        device = dt_pde["s"].device
+        data_batch = {_k: _v.repeat([self.num_ex] + [1] * (_v.dim()-1)) for _k,_v in dt_pde.items()}
+        data_batch["t"] = torch.arange(0, self.T, self.dt, device=device).reshape(-1,1).repeat_interleave(dt_pde["s"].shape[0], dim=0)
+        data_batch["x"] = self.pde.get_X(data_batch, data_batch["s"])
+        data_batch["tau"] = self.T - data_batch["t"] - self.dt
+        cont_value = self.pde.option_price(data_batch, self.payoff.x.reshape(self.dimension,-1), option_type=self.option_type)
+        if self.var_rescale == True:
+            var_rescale_const = self.var_rescale_k * (self.T - torch.arange(self.dt, self.T, self.dt)).reshape(-1,1).repeat_interleave(dt_pde["s"].shape[0],dim=0).to(cont_value.device)
+            cont_value[:-dt_pde["s"].shape[0],:] = cont_value[:-dt_pde["s"].shape[0],:] + var_rescale_const * torch.from_numpy(self.payoff.random(cont_value[:-dt_pde["s"].shape[0],:].shape[0])).to(cont_value.device)
+        else:
+            cont_value += torch.from_numpy(self.payoff.random(cont_value.shape[0])).to(cont_value.device)
+        cont_value[-dt_pde["s"].shape[0]:,:] = 0
+
+        data_batch["payoff"] = torch.maximum(cont_value, self.pde.get_payoff(self.payoff.x.reshape(self.dimension,-1), data_batch["K"], opt_type=self.option_type))
+        data_batch["t"].fill_(self.dt)
+        xs = self.pde.get_X(data_batch, data_batch["x"])
+
+        data_batch["y"] = torch.exp(- data_batch["r"] * self.dt) * parallel_interpolation(xs, self.payoff.x, data_batch["payoff"], interp_method=self.interp_method)
+
+        return data_batch
+
+
+
+    
+    # def __getitem__(self, idx):
+    #     '''
+    #     idx : useless arg in our case.
+    #     '''
+
+    #     dt_pde = next(iter(self.pde.dataloader(self.batch_size, 1, 'train', frezed_params=self.frezed_params))) # generate a batch pdes data
+    #     device = dt_pde["t"].device
+    #     res = {"payoff": [],
+    #            "y": []
+    #            }
+    #     for i in range(self.num_ex):
+    #         dt_pde["t"].fill_(i*self.T/self.num_ex)
+    #         dt_pde["x"] = self.pde.get_X(dt_pde)
+    #         dt_pde["t"] += self.T/self.num_ex
+    #         if i == self.num_ex-1:
+    #             cont_value = torch.zeros(1,1, device=device)
+    #         else:
+    #             cont_value = self.pde.option_price(self.T - dt_pde["t"], self.payoff.x.reshape(1,-1), dt_pde["sigma"], dt_pde["r"], dt_pde["q"], dt_pde["K"], option_type=self.option_type)
+    #             if self.var_rescale == True:
+    #                 cont_value += self.var_rescale_k * (self.T - (i+1)*self.T/self.num_ex) * torch.from_numpy(self.payoff.random(cont_value.shape[0]))
+    #             else:
+    #                 cont_value += torch.from_numpy(self.payoff.random(cont_value.shape[0]))
+    #         if self.option_type == "call":
+    #             dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(self.payoff.x.reshape(1,-1)-dt_pde["K"]))
+    #         else:
+    #             dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(dt_pde["K"]-self.payoff.x.reshape(1,-1)))
             
-            for _k in dt_pde.keys():
-                if _k not in res.keys():
-                    res[_k] = []
-                res[_k].append(dt_pde[_k].clone())
-            res["payoff"].append(dt_payoff)
+    #         for _k in dt_pde.keys():
+    #             if _k not in res.keys():
+    #                 res[_k] = []
+    #             res[_k].append(dt_pde[_k].clone())
+    #         res["payoff"].append(dt_payoff)
 
-            xs = self.pde.sde(torch.full_like(dt_pde["t"], self.T/self.num_ex), dt_pde["x"], dt_pde["r"], dt_pde["q"], dt_pde["sigma"])
-            print(f"The device of dt_pde.t is {device}.")
+    #         xs = self.pde.sde(torch.full_like(dt_pde["t"], self.T/self.num_ex), dt_pde["x"], dt_pde["r"], dt_pde["q"], dt_pde["sigma"])
+    #         print(f"The device of dt_pde.t is {device}.")
 
-            res["y"].append(
-                torch.exp(- dt_pde["r"] * self.T/self.num_ex) * parallel_interpolation(xs, self.payoff.x, dt_payoff, interp_method=self.interp_method)
-            )
-        for _k in res.keys():
-            res[_k] = torch.concat(res[_k], dim=0)
-        return res
+    #         res["y"].append(
+    #             torch.exp(- dt_pde["r"] * self.T/self.num_ex) * parallel_interpolation(xs, self.payoff.x, dt_payoff, interp_method=self.interp_method)
+    #         )
+    #     for _k in res.keys():
+    #         res[_k] = torch.concat(res[_k], dim=0)
+    #     return res
 
 
 class Data_Saved(Dataset):
@@ -108,9 +145,9 @@ class Bermudan(ABC):
         self.option_type = config["option_type"]
         self.output_params = config["output_params"]
 
-    def dataloader(self, batch_size, n_batches, frezed_params, interp_method, var_rescale=False, var_rescale_k=1):
+    def dataloader(self, batch_size, n_batches, frezed_params, interp_method, var_rescale=False, var_rescale_k=1, device="cpu"):
         return DataLoader(
-            Data_Bermudan(self.pde, self.payoff, self.T, self.num_ex, self.option_type, batch_size, n_batches, frezed_params, interp_method, var_rescale, var_rescale_k), None
+            Data_Bermudan(self.pde, self.payoff, self.T, self.num_ex, self.option_type, batch_size, n_batches, frezed_params, interp_method, var_rescale, var_rescale_k, device), None
         )
     
     @abstractmethod

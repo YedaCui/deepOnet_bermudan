@@ -24,7 +24,7 @@ def sampling(config, device="cuda", data_types=["train", "val", "test"]):
     bermudan = BERMUDANS[config["bermudan"]](pde, payoff, config)
 
     dt_loaders = {
-        _data_type: bermudan.dataloader(config[f"bs_{_data_type}"], config[f"n_{_data_type}_batches"], config["frezed_params"], config["interp_method"],config["var_rescale"], config["var_rescale_k"])
+        _data_type: bermudan.dataloader(config[f"bs_{_data_type}"], config[f"n_{_data_type}_batches"], config["frezed_params"], config["interp_method"],config["var_rescale"], config["var_rescale_k"], device)
         for _data_type in data_types
     }
 
@@ -41,8 +41,8 @@ def sampling(config, device="cuda", data_types=["train", "val", "test"]):
         _idx = 0
         for batch in dt_loader:
             if dt_type in ["val", "test"]:
-                if torch.cuda.is_available():
-                    batch = {_k: _v.to(device) for _k, _v in batch.items()}
+                # if torch.cuda.is_available():
+                #     batch = {_k: _v.to(device) for _k, _v in batch.items()}
                 batch["solution"] = bermudan.solution(batch)
             batch = {
                 _param: torch.from_numpy(batch[_param]) if isinstance(batch[_param], np.ndarray) else batch[_param] 
