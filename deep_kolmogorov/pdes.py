@@ -162,6 +162,11 @@ class Pde(ABC):
     def option_price(batch):
         pass
 
+    @staticmethod
+    @abstractmethod
+    def get_payoff(batch):
+        pass
+
     def __repr__(self):
         return f"Parametrized {self.__class__.__name__} PDE with hypercubes {self.__hypercubes}"
 
@@ -292,7 +297,8 @@ class BSr(Pde):
         else:
             return x * torch.exp(-q*t) * n_dist(_d) - K * torch.exp(-r*t) * n_dist(_d - sigma_sqrtt) + K * torch.exp(-r*t) - x * torch.exp(-q*t)
     
-    def get_payoff(self, x, K, opt_type):
+    @staticmethod
+    def get_payoff(x, K, opt_type):
         x = x.to(K.device)
         if opt_type == "call":
             return torch.nn.ReLU()(x - K)
@@ -407,8 +413,9 @@ class BSbasketMax(Pde):
             return batch["kappa"] * torch.min(batch["s"], dim=-1, keepdim=True)[0]
     
     get_r, get_sigma = None, None
-
-    def get_payoff(self, x, K, opt_type):
+    
+    @staticmethod
+    def get_payoff(x, K, opt_type):
         if opt_type == "call":
             return torch.nn.ReLU()(torch.max(x, dim=-1, keepdim=True)[0] - K)
         else:
