@@ -1478,7 +1478,7 @@ import torch
 #         "var_rescale_k": 2,
 #         "bermudan": "Bermudan_1D",
 #         "T": 1,
-#         "num_ex": 12,
+#         "num_ex": 250,
 #         "option_type": "put",
 #         "output_params": ["x",  "r", "q", "sigma", "K"],
 #         "frezed_params": {"t":0},
@@ -1489,7 +1489,7 @@ import torch
 #         "n_train_batches": 20000,
 #         "n_test_batches": 1000,
 #         "n_val_batches": 1000,
-#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_12_qmax_0.1_sensor_type_MP_num_sensor_100_var_rescale_2"
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_250_qmax_0.1_sensor_type_MP_num_sensor_100_var_rescale_2"
 #     }
 # sampling.sampling(config=config, device="cuda:1")
 
