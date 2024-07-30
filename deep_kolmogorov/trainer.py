@@ -72,12 +72,18 @@ class Trainer(tune.Trainable):
         )
         # accumulation_steps
         self.accu_steps = config["accu_steps"] if "accu_steps" in config.keys() else 1
+        # accumulation_steps_test
+        self.accu_steps_test = config["accu_steps_test"] if "accu_steps_test" in config.keys() else 1
         # metrics
         self.train_metr = Metrics()
         self.test_metr = Metrics()
         self.val_metr = Metrics()
         self.test_metr_ini = Metrics()
         self.val_metr_ini = Metrics()
+        self.test_metr_cv = Metrics()
+        self.val_metr_cv = Metrics()
+        self.test_metr_cv_ini = Metrics()
+        self.val_metr_cv_ini = Metrics()
         # data
         self.data_path = config["data_path"] # if None, generate data for each iteration.
         if self.data_path:
@@ -92,6 +98,8 @@ class Trainer(tune.Trainable):
         # stats
         first_scores_test = self._test_loop()
         first_scores_test_ini = self._test_ini_loop()
+        first_scores_test_cv = self._test_cv_loop()
+        first_scores_test_cv_ini = self._test_cv_ini_loop()
         # try:
         #     first_scores_test = self._test_loop()
         # except RuntimeError as e:
@@ -106,12 +114,18 @@ class Trainer(tune.Trainable):
 
         first_scores_val = self._val_loop()
         first_scores_val_ini = self._val_ini_loop()
+        first_scores_val_cv = self._val_cv_loop()
+        first_scores_val_cv_ini = self._val_cv_ini_loop()
         self.initial_stats = {
             "params": self.num_net_params,
             "test_initial": first_scores_test["current"],
             "val_initial": first_scores_val["current"],
             "test_ini_initial": first_scores_test_ini["current"],
             "val_ini_initial": first_scores_val_ini["current"],
+            "test_cv_initial": first_scores_test_cv["current"],
+            "val_cv_initial": first_scores_val_cv["current"],
+            "test_cv_ini_initial": first_scores_test_cv_ini["current"],
+            "val_cv_ini_initial": first_scores_val_cv_ini["current"],
         }
 
     @staticmethod
@@ -133,11 +147,19 @@ class Trainer(tune.Trainable):
         val_scores = self._val_loop()
         test_scores_ini = self._test_ini_loop()
         val_scores_ini = self._val_ini_loop()
+        test_scores_cv = self._test_cv_loop()
+        val_scores_cv = self._val_cv_loop()
+        test_scores_cv_ini = self._test_cv_ini_loop()
+        val_scores_cv_ini = self._val_cv_ini_loop()
         return {
             "val": val_scores,
             "test": test_scores,
             "val_ini": val_scores_ini,
             "test_ini": test_scores_ini,
+            "val_cv": val_scores_cv,
+            "test_cv": test_scores_cv,
+            "val_cv_ini": val_scores_cv_ini,
+            "test_cv_ini": test_scores_cv_ini,
             "train": train_scores,
             "initial_stats": self.initial_stats,
             "lr_groups": lr_groups,
@@ -162,26 +184,78 @@ class Trainer(tune.Trainable):
     def _test_loop(self):
         # test
         self.model.eval()
+        i = 0
         # zero running metrics
         self.test_metr.zero()
         with torch.no_grad():
             for batch in self.test_loader:
-                # forward and metrics
-                output = self.model.forward(batch, train=False)
-                self.test_metr.store(output)
+                if i % self.accu_steps_test == 0:
+                    accu_batch = batch
+                else:
+                    accu_batch = {_k: torch.concat([_v,batch[_k]], dim=0) for _k,_v in accu_batch.items()}
+                if i % self.accu_steps_test == (self.accu_steps_test-1):
+                    # forward and metrics
+                    output = self.model.forward(accu_batch, train=False)
+                    self.test_metr.store(output)
+                i += 1
         return self.test_metr.finalize()
     
     def _test_ini_loop(self):
         # test
         self.model.eval()
+        i = 0
         # zero running metrics
         self.test_metr_ini.zero()
         with torch.no_grad():
             for batch in self.test_loader:
-                # forward and metrics
-                output = self.model.forward(batch, train=False, ini=True)
-                self.test_metr_ini.store(output)
+                if i % self.accu_steps_test == 0:
+                    accu_batch = batch
+                else:
+                    accu_batch = {_k: torch.concat([_v,batch[_k]], dim=0) for _k,_v in accu_batch.items()}
+                if i % self.accu_steps_test == (self.accu_steps_test-1):
+                    # forward and metrics
+                    output = self.model.forward(accu_batch, train=False, ini=True)
+                    self.test_metr_ini.store(output)
+                i += 1
         return self.test_metr_ini.finalize()
+    
+    def _test_cv_loop(self):
+        # test
+        self.model.eval()
+        i = 0
+        # zero running metrics
+        self.test_metr_cv.zero()
+        with torch.no_grad():
+            for batch in self.test_loader:
+                if i % self.accu_steps_test == 0:
+                    accu_batch = batch
+                else:
+                    accu_batch = {_k: torch.concat([_v,batch[_k]], dim=0) for _k,_v in accu_batch.items()}
+                if i % self.accu_steps_test == (self.accu_steps_test-1):
+                    # forward and metrics
+                    output = self.model.forward(accu_batch, train=False, cv=True)
+                    self.test_metr_cv.store(output)
+                i += 1
+        return self.test_metr.finalize()
+    
+    def _test_cv_ini_loop(self):
+        # test
+        self.model.eval()
+        i = 0
+        # zero running metrics
+        self.test_metr_cv_ini.zero()
+        with torch.no_grad():
+            for batch in self.test_loader:
+                if i % self.accu_steps_test == 0:
+                    accu_batch = batch
+                else:
+                    accu_batch = {_k: torch.concat([_v,batch[_k]], dim=0) for _k,_v in accu_batch.items()}
+                if i % self.accu_steps_test == (self.accu_steps_test-1):
+                    # forward and metrics
+                    output = self.model.forward(accu_batch, train=False, ini=True, cv=True)
+                    self.test_metr_cv_ini.store(output)
+                i += 1
+        return self.test_metr_cv_ini.finalize()
     
     def _test_greeks_loop(self, greeks=["delta"], method="autodiff", d=0.001):
         # test greeks
@@ -201,26 +275,78 @@ class Trainer(tune.Trainable):
     def _val_loop(self):
         # test
         self.model.eval()
+        i = 0
         # zero running metrics
         self.val_metr.zero()
         with torch.no_grad():
             for batch in self.val_loader:
-                # forward and metrics
-                output = self.model.forward(batch, train=False)
-                self.val_metr.store(output)
+                if i % self.accu_steps_test == 0:
+                    accu_batch = batch
+                else:
+                    accu_batch = {_k: torch.concat([_v,batch[_k]], dim=0) for _k,_v in accu_batch.items()}
+                if i % self.accu_steps_test == (self.accu_steps_test-1):
+                    # forward and metrics
+                    output = self.model.forward(accu_batch, train=False)
+                    self.val_metr.store(output)
+                i += 1
         return self.val_metr.finalize()
     
     def _val_ini_loop(self):
         # test
         self.model.eval()
+        i = 0
         # zero running metrics
         self.val_metr_ini.zero()
         with torch.no_grad():
             for batch in self.val_loader:
-                # forward and metrics
-                output = self.model.forward(batch, train=False, ini=True)
-                self.val_metr_ini.store(output)
+                if i % self.accu_steps_test == 0:
+                    accu_batch = batch
+                else:
+                    accu_batch = {_k: torch.concat([_v,batch[_k]], dim=0) for _k,_v in accu_batch.items()}
+                if i % self.accu_steps_test == (self.accu_steps_test-1):
+                    # forward and metrics
+                    output = self.model.forward(accu_batch, train=False, ini=True)
+                    self.val_metr_ini.store(output)
+                i += 1
         return self.val_metr_ini.finalize()
+    
+    def _val_cv_loop(self):
+        # test
+        self.model.eval()
+        i = 0
+        # zero running metrics
+        self.val_metr_cv.zero()
+        with torch.no_grad():
+            for batch in self.val_loader:
+                if i % self.accu_steps_test == 0:
+                    accu_batch = batch
+                else:
+                    accu_batch = {_k: torch.concat([_v,batch[_k]], dim=0) for _k,_v in accu_batch.items()}
+                if i % self.accu_steps_test == (self.accu_steps_test-1):
+                    # forward and metrics
+                    output = self.model.forward(accu_batch, train=False, cv=True)
+                    self.val_metr_cv.store(output)
+                i += 1
+        return self.val_metr_cv.finalize()
+    
+    def _val_cv_ini_loop(self):
+        # test
+        self.model.eval()
+        i = 0
+        # zero running metrics
+        self.val_metr_cv_ini.zero()
+        with torch.no_grad():
+            for batch in self.val_loader:
+                if i % self.accu_steps_test == 0:
+                    accu_batch = batch
+                else:
+                    accu_batch = {_k: torch.concat([_v,batch[_k]], dim=0) for _k,_v in accu_batch.items()}
+                if i % self.accu_steps_test == (self.accu_steps_test-1):
+                    # forward and metrics
+                    output = self.model.forward(accu_batch, train=False, ini=True, cv=True)
+                    self.val_metr_cv_ini.store(output)
+                i += 1
+        return self.val_metr_cv_ini.finalize()
 
     def save_checkpoint(self, checkpoint_dir):
         checkpoint_path = os.path.join(checkpoint_dir, "model.pth")
@@ -2703,7 +2829,8 @@ HYPERCONFIGS = {
         # "n_test_batches": 1000,
         "n_train_batches": 2000,
         "n_test_batches": 1000,
-        "accu_steps": 10,
+        "accu_steps": 1,
+        "accu_steps_test": 10,
         "lr": 0.01,
         "min_lr": 1e-8,
         "lr_decay": 0.25,
@@ -2742,7 +2869,8 @@ HYPERCONFIGS = {
         # "n_test_batches": 1000,
         "n_train_batches": 2000,
         "n_test_batches": 1000,
-        "accu_steps": 10,
+        "accu_steps": 1,
+        "accu_steps_test": 10,
         "lr": 0.01,
         "min_lr": 1e-8,
         "lr_decay": 0.25,
@@ -2781,7 +2909,8 @@ HYPERCONFIGS = {
         # "n_test_batches": 1000,
         "n_train_batches": 2000,
         "n_test_batches": 1000,
-        "accu_steps": 10,
+        "accu_steps": 1,
+        "accu_steps_test": 10,
         "lr": 0.01,
         "min_lr": 1e-8,
         "lr_decay": 0.25,
@@ -2795,7 +2924,174 @@ HYPERCONFIGS = {
         "num_width" : tune.grid_search([35, 55, 75]),
         "num_depth" : tune.grid_search([5,7]),
     },
-
+    "avg_bs_bermudan_put_free_test_num_ex_4_qmax_0.1_sensor_type_MP_num_sensor_50_var_rescale_2_cnn": {
+        "seed": tune.grid_search([0]),
+        "checkpoint": True,
+        "pde": "BSr",
+        "net": "DNNKernel",
+        "payoff": "GRF",
+        "sensor": torch.from_numpy(MP_grid(n=50)).float(),
+        "size_sensor": 50,
+        "kernel": "RBF", 
+        "length_scale":10,
+        "var_scale":1,
+        "bermudan": "Bermudan_1D",
+        "T": 1,
+        "num_ex": 4,
+        "option_type": "put",
+        "output_params": ["x", "r", "q", "sigma", "K"],
+        "frezed_params": {"t":0},
+        "interp_method": "linear",
+        "opt": "adamw",
+        "bs_train": 10000,
+        "bs_test": 100,
+        # "n_train_batches": 2000,
+        # "n_test_batches": 1000,
+        "n_train_batches": 2000,
+        "n_test_batches": 1000,
+        "accu_steps": 1,
+        "lr": 0.01,
+        "min_lr": 1e-8,
+        "lr_decay": 0.25,
+        "lr_decay_patience": 4,
+        "weight_decay": 0.01,
+        "unfreeze": "all",
+        "unfreeze_patience": 1,
+        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_4_qmax_0.1_sensor_type_MP_num_sensor_50_var_rescale_2",
+        "n_iterations": 30,
+        "size_t_x_u": [0,1,4],
+        "num_width" : tune.grid_search([35, 55, 75]),
+        "num_depth" : tune.grid_search([5]),
+        "num_outputs": tune.grid_search([20,40]), # the output dimension of the embedding net
+        "out_channels": tune.grid_search([5,10]),
+        "kernel_size": tune.grid_search([20,40]),
+    },
+    "avg_bs_bermudan_put_free_test_num_ex_4_qmax_0.1_sensor_type_MP_num_sensor_100_var_rescale_2_cnn": {
+        "seed": tune.grid_search([0]),
+        "checkpoint": True,
+        "pde": "BSr",
+        "net": "DNNKernel",
+        "payoff": "GRF",
+        "sensor": torch.from_numpy(MP_grid(n=100)).float(),
+        "size_sensor": 100,
+        "kernel": "RBF", 
+        "length_scale":10,
+        "var_scale":1,
+        "bermudan": "Bermudan_1D",
+        "T": 1,
+        "num_ex": 4,
+        "option_type": "put",
+        "output_params": ["x", "r", "q", "sigma", "K"],
+        "frezed_params": {"t":0},
+        "interp_method": "linear",
+        "opt": "adamw",
+        "bs_train": 10000,
+        "bs_test": 100,
+        # "n_train_batches": 2000,
+        # "n_test_batches": 1000,
+        "n_train_batches": 2000,
+        "n_test_batches": 1000,
+        "accu_steps": 1,
+        "lr": 0.01,
+        "min_lr": 1e-8,
+        "lr_decay": 0.25,
+        "lr_decay_patience": 4,
+        "weight_decay": 0.01,
+        "unfreeze": "all",
+        "unfreeze_patience": 1,
+        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_4_qmax_0.1_sensor_type_MP_num_sensor_100_var_rescale_2",
+        "n_iterations": 30,
+        "size_t_x_u": [0,1,4],
+        "num_width" : tune.grid_search([35, 55, 75]),
+        "num_depth" : tune.grid_search([5]),
+        "num_outputs": tune.grid_search([20,40]), # the output dimension of the embedding net
+        "out_channels": tune.grid_search([5,10]),
+        "kernel_size": tune.grid_search([20,40]),
+    },
+    "avg_bs_bermudan_put_free_test_num_ex_4_qmax_0.1_sensor_type_MP_num_sensor_200_var_rescale_2_cnn": {
+        "seed": tune.grid_search([0]),
+        "checkpoint": True,
+        "pde": "BSr",
+        "net": "DNNKernel",
+        "payoff": "GRF",
+        "sensor": torch.from_numpy(MP_grid(n=200)).float(),
+        "size_sensor": 200,
+        "kernel": "RBF", 
+        "length_scale":10,
+        "var_scale":1,
+        "bermudan": "Bermudan_1D",
+        "T": 1,
+        "num_ex": 4,
+        "option_type": "put",
+        "output_params": ["x", "r", "q", "sigma", "K"],
+        "frezed_params": {"t":0},
+        "interp_method": "linear",
+        "opt": "adamw",
+        "bs_train": 10000,
+        "bs_test": 100,
+        # "n_train_batches": 2000,
+        # "n_test_batches": 1000,
+        "n_train_batches": 2000,
+        "n_test_batches": 1000,
+        "accu_steps": 1,
+        "lr": 0.01,
+        "min_lr": 1e-8,
+        "lr_decay": 0.25,
+        "lr_decay_patience": 4,
+        "weight_decay": 0.01,
+        "unfreeze": "all",
+        "unfreeze_patience": 1,
+        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_4_qmax_0.1_sensor_type_MP_num_sensor_200_var_rescale_2",
+        "n_iterations": 30,
+        "size_t_x_u": [0,1,4],
+        "num_width" : tune.grid_search([35, 55, 75]),
+        "num_depth" : tune.grid_search([5]),
+        "num_outputs": tune.grid_search([20,40]), # the output dimension of the embedding net
+        "out_channels": tune.grid_search([5,10]),
+        "kernel_size": tune.grid_search([20,40]),
+    },
+    "avg_bs_bermudan_put_free_test_num_ex_12_qmax_0.1_sensor_type_MP_num_sensor_100_var_rescale_2_cnn": {
+        "seed": tune.grid_search([0]),
+        "checkpoint": True,
+        "pde": "BSr",
+        "net": "DNNKernel",
+        "payoff": "GRF",
+        "sensor": torch.from_numpy(MP_grid(n=100,g1=50,g2=50)).float(),
+        "size_sensor": 100,
+        "kernel": "RBF", 
+        "length_scale":10,
+        "var_scale":1,
+        "bermudan": "Bermudan_1D",
+        "T": 1,
+        "num_ex": 12,
+        "option_type": "put",
+        "output_params": ["x", "r", "q", "sigma", "K"],
+        "frezed_params": {"t":0},
+        "interp_method": "linear",
+        "opt": "adamw",
+        "bs_train": 10000,
+        "bs_test": 100,
+        # "n_train_batches": 2000,
+        # "n_test_batches": 1000,
+        "n_train_batches": 2000,
+        "n_test_batches": 1000,
+        "accu_steps": 1,
+        "lr": 0.01,
+        "min_lr": 1e-8,
+        "lr_decay": 0.25,
+        "lr_decay_patience": 2,
+        "weight_decay": 0.01,
+        "unfreeze": "all",
+        "unfreeze_patience": 1,
+        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data/free_test_num_ex_12_qmax_0.1_sensor_type_MP_num_sensor_100_var_rescale_2",
+        "n_iterations": 30,
+        "size_t_x_u": [0,1,4],
+        "num_width" : tune.grid_search([35, 55, 75]),
+        "num_depth" : tune.grid_search([5]),
+        "num_outputs": tune.grid_search([20,40]), # the output dimension of the embedding net
+        "out_channels": tune.grid_search([5,10]),
+        "kernel_size": tune.grid_search([20,40]),
+    },
 }
 
 

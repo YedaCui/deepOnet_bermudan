@@ -1,0 +1,29 @@
+Failure # 1 (occurred at 2024-07-27_01-33-59)
+The actor died because of an error raised in its creation task, [36mray::Trainer.__init__()[39m (pid=284474, ip=137.189.58.22, actor_id=ffa68ff81dfc5ee3885926ed01000000, repr=<deep_kolmogorov.trainer.Trainer object at 0x7f37be308dc0>)
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/ray/tune/trainable/trainable.py", line 169, in __init__
+    self.setup(copy.deepcopy(self.config))
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/trainer.py", line 99, in setup
+    first_scores_test = self._test_loop()
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/trainer.py", line 198, in _test_loop
+    output = self.model.forward(accu_batch, train=False)
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/nn/parallel/data_parallel.py", line 166, in forward
+    return self.module(*inputs[0], **kwargs[0])
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/modeling.py", line 242, in forward
+    y_pred = self.price_bermudan(batch)
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/modeling.py", line 284, in price_bermudan
+    res.append(self.net.forward(tensor))
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/modeling.py", line 172, in forward
+    encod_sensor_tensor = self.kernel(sensor_tensor.reshape(sensor_tensor.shape[0], self.in_channels, -1))
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/ycui/Documents/deepOnet_bermudan/deep_kolmogorov/modeling.py", line 156, in forward
+    x = nn.functional.relu(self.conv2(x))
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/nn/modules/conv.py", line 307, in forward
+    return self._conv_forward(input, self.weight, self.bias)
+  File "/home/ycui/.conda/envs/torch/lib/python3.10/site-packages/torch/nn/modules/conv.py", line 303, in _conv_forward
+    return F.conv1d(input, weight, bias, self.stride,
+RuntimeError: Calculated padded input size per channel: (11). Kernel size: (40). Kernel size can't be greater than actual input size

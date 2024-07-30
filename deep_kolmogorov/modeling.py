@@ -149,7 +149,7 @@ class KernelOperator(DenseOperator):
     def __init__(self, in_channels, out_channels, kernel_size, num_outputs):
         super(KernelOperator, self).__init__(num_outputs)
         self.conv1 = nn.Conv1d(in_channels, out_channels, kernel_size)
-        self.conv2 = nn.Conv1d(out_channels, out_channels, 3)
+        self.conv2 = nn.Conv1d(out_channels, out_channels, kernel_size)
     
     def forward(self, x):
         x = nn.functional.relu(self.conv1(x))
@@ -212,7 +212,11 @@ class KolmogorovNet(torch.nn.Module):
         self.bermudan = bermudan
         self.saved_data = saved_data
 
-    def forward(self, batch, train=True, ini=False):
+    def forward(self, batch, train=True, ini=False, cv=False):
+        """
+        ini : if True, return only the value at t_0;
+        cv (continuation value) : if True, return the continuation value at early exercise dates. (valid only from saved data set.)
+        """
         if batch["x"].ndim == 3:
             batch = {
             _k: _v.squeeze(0) for _k, _v in batch.items()
@@ -223,6 +227,8 @@ class KolmogorovNet(torch.nn.Module):
             else:
                 if self.saved_data:
                     y = batch["solution"] # shape batch["x"].shape[0] / self.bermudan.num_ex
+                    if not cv:
+                        y = torch.maximum(y, self.bermudan.pde.get_payoff(batch["x"], batch["K"], opt_type=self.bermudan.option_type).reshape(y.shape[::-1]).T)
                 else:
                     y = self.bermudan.solution(batch)
             tensor = torch.concat(
@@ -234,7 +240,8 @@ class KolmogorovNet(torch.nn.Module):
             y_pred = self.net.forward(tensor)
         else:
             y_pred = self.price_bermudan(batch)
-        print(y_pred.shape[0])
+            if not cv:
+                y_pred = torch.maximum(y_pred, self.bermudan.pde.get_payoff(batch["x"], batch["K"], opt_type=self.bermudan.option_type).reshape(y_pred.shape[::-1]).T)
         if ini:
             return {"bermudan": y[:,[0]], "net": y_pred[:,[0]]}
         else:
