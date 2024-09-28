@@ -51,7 +51,7 @@ class FunctionSpace(abc.ABC):
 
 
 class GRF(FunctionSpace):
-    """Gaussian random field (Gaussian process) in 1D.
+    """Gaussian random field (Gaussian process).
 
     The random sampling algorithm is based on Cholesky decomposition of the covariance
     matrix.
@@ -69,7 +69,7 @@ class GRF(FunctionSpace):
     """
 
     def __init__(self, sensor, kernel="RBF", length_scale=10, var_scale=1):
-        self.x = sensor.reshape(-1,1)
+        self.x = sensor
         self.N = self.x.shape[0]
         if kernel == "RBF":
             K = var_scale * gp.kernels.RBF(length_scale=length_scale)

@@ -1,8 +1,13 @@
 import numpy as np
 import torch
 from scipy import interpolate
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from scipy.stats.qmc import Sobol
 
+
+def _interp(args):
+    x, _x, _y = args
+    return interpolate.LinearNDInterpolator(x, _y)(_x)
 
 
 def parallel_interpolation(xs, x, features, interp_method):
@@ -23,18 +28,22 @@ def parallel_interpolation(xs, x, features, interp_method):
     x = move_to_cpu_if_tensor(x)
     features = move_to_cpu_if_tensor(features)
 
+
+    
     print("Begin to do the interpolation")
-    if interp_method == "linear":
-        res = np.vstack([np.interp(_x, np.ravel(x), _y) for _x, _y in zip(xs, features)])
+    if x.shape[1] == 1:
+        if interp_method == "linear":
+            res = np.vstack([np.interp(_x, np.ravel(x), _y) for _x, _y in zip(xs, features)])
     else:
-        with ProcessPoolExecutor() as executor:
-            res = list(executor.map(
-                lambda _x, _y: interpolate.interp1d(
-                    np.ravel(x), _y, kind=interp_method, copy=False, assume_sorted=True
-                )(_x),
-                zip(xs, features)
-            ))
-        res = np.vstack(res)
+        if interp_method == "linear":
+            # interps = [interpolate.LinearNDInterpolator(x, _y) for _y in features]
+            # res = [_interp(_x) for _interp, _x in zip(interps, xs)]
+            with ProcessPoolExecutor() as executor:
+                try:
+                    res = list(executor.map(_interp, zip([x]*len(xs), xs,features)))
+                except Exception as e:
+                    print(f"Task generated an exception {e}.")
+            res = np.vstack(res)
     print("Finish the interpolation.")
     res = torch.from_numpy(res).to(xs_device)
     return res
@@ -106,6 +115,23 @@ def MP_grid(a=0.01, s=10, b=80, g1=10, g2=5, n=50):
     Gblock2 = s + g2 * np.sinh(c2 * linspace2)
     
     Gblock = np.concatenate([Gblock1, Gblock2],axis=0)
-    return Gblock
+    return Gblock.astype(np.float32)
     
+def qmc_grid(a=0.01, b=80, d=3, n=50, shiftbymp=True, s=10, g1=10, g2=5):
+    # if shiftbymp is True, shift the samples by MP nonlinear mapping.
 
+    sampler = Sobol(d)
+    samples = sampler.random(n)
+
+    if not shiftbymp:
+        res = a + (b-a)*samples
+    else:
+        c1 = np.arcsinh((a - s) / g1)
+        c2 = np.arcsinh((b - s) / g2)
+        res = np.where(samples <= 0.5, s + g1 * np.sinh(c1 * (0.5-samples)*2), s + g2 * np.sinh(c2 * (samples-0.5)*2))
+
+    return res.astype(np.float32)
+        
+
+        
+        

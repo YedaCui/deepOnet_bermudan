@@ -313,31 +313,6 @@ class BSr(Pde):
             return (batch[param] - self.hypercubes["s"].mean * self.hypercubes["kappa"].mean) / (self.hypercubes["kappa"].mean ** 2 * self.hypercubes["s"].std ** 2 + self.hypercubes["s"].mean ** 2 * self.hypercubes["kappa"].std ** 2) ** 0.5
         else:
             return (batch[param] - self.hypercubes[param].mean) / self.hypercubes[param].std
-        
-    
-
-    def get_greeks(self, batch, greeks=["delta"]):
-        """
-        Outputs the delta of the given samples with a dict.
-        """
-        t = self.hypercubes["t"].interval[1] - batch["t"]
-        S = batch["x"]
-        K = batch["K"]
-        r = batch["r"]
-        sigma = batch["sigma"]
-        d1 = (torch.log(S / K) + (r + 0.5 * sigma**2) * t) / (sigma * torch.sqrt(t))
-
-        def _get_greek(greek):
-            if greek == "delta":
-                delta = n_dist(d1)
-                return delta
-            if greek == "vega":
-                vega = S * n_density(d1) * torch.sqrt(t)
-                return vega
-        
-        return {
-            _v : _get_greek(_v) for _v in greeks
-        }
 
 
 HYPERCUBES["black_scholes_basket"] = {
@@ -502,6 +477,108 @@ class BSbasketAmean(Pde):
 
     def option_price(self, batch):
         pass
+    
+    def naf(self, batch, param, No_normalization_and_flatten=False):
+        if param == "x":
+            return (batch[param] - self.hypercubes["s"].mean) /  self.hypercubes["s"].std
+        elif param == 'K':
+            return (batch[param] - self.hypercubes["s"].mean * self.hypercubes["kappa"].mean) / (self.hypercubes["kappa"].mean ** 2 * self.hypercubes["s"].std ** 2 + self.hypercubes["s"].mean ** 2 * self.hypercubes["kappa"].std ** 2) ** 0.5
+        else:
+            return (batch[param] - self.hypercubes[param].mean) / self.hypercubes[param].std
+
+
+class BSbasketGmean(Pde):
+    params = ("t", "x", "r", "q", "sigma", "rho", "K")
+
+    def __init__(self, d=3, hypercubes=HYPERCUBES["black_scholes_basket"]):
+        hypercubes["s"].dims = (d,)
+        hypercubes["sigma"].dims = (d,)
+        hypercubes["q"].dims = (d,)
+        super().__init__(hypercubes)
+
+    @staticmethod
+    def _check_dims(hypercubes):
+        return True
+
+    @staticmethod
+    def sde(x_0, r, q, sigma, t, rho):
+        """
+        get the X from S_0
+        """
+
+        n = sigma.shape[-1]
+        batch_size = sigma.shape[0]
+        RHO = rho.view(batch_size, 1, 1).expand(batch_size, n, n).clone()
+        RHO.as_strided((batch_size, n), (n ** 2, n + 1)).fill_(1)
+        sqrt_cov = torch.linalg.cholesky(RHO)
+
+        dw = torch.sqrt(t) * torch.matmul(sqrt_cov, 
+                                                torch.randn(x_0.shape, dtype=x_0.dtype, device=x_0.device).unsqueeze(2)
+        ).squeeze(2)
+
+        sde = x_0 * torch.exp(
+            (r - q) * t - 0.5 * t * sigma ** 2 + sigma * dw
+        )
+        return sde
+    
+    @staticmethod
+    def get_X(batch, x):
+        """
+        get the X from S_0
+        """
+        n = batch["sigma"].shape[-1]
+        batch_size = batch["sigma"].shape[0]
+        RHO = batch["rho"].view(batch_size, 1, 1).expand(batch_size, n, n).clone()
+        RHO.as_strided((batch_size, n), (n ** 2, n + 1)).fill_(1)
+        sqrt_cov = torch.linalg.cholesky(RHO)
+        dw = torch.sqrt(batch["t"]) * torch.matmul(sqrt_cov, 
+                                                torch.randn(batch["s"].shape, dtype=batch["s"].dtype, device=batch["s"].device).unsqueeze(2)
+        ).squeeze(2)
+        sde = x * torch.exp(
+            batch["r"] * batch["t"] - 0.5 * batch["t"] * batch["sigma"] ** 2 + batch["sigma"] * dw
+        )
+        return sde
+    
+    @staticmethod
+    def get_K(batch):
+        """
+        Get the K from kappa and S_0
+        """
+        return batch["kappa"] * torch.mean(batch["s"], dim=-1, keepdim=True)
+    
+    get_r, get_sigma = None, None
+
+    def get_payoff(self, x, K, opt_type, dim=-1):
+        x = x.to(K.device)
+        if opt_type == "call":
+            return torch.nn.ReLU()(torch.exp(torch.mean(torch.log(x), dim=dim, keepdim=True)) - K)
+        else:
+            # return torch.nn.ReLU()(K - torch.pow(torch.prod(x, dim=dim, keepdim=True), 1.0/x.shape[dim]))
+            return torch.nn.ReLU()(K - torch.exp(torch.mean(torch.log(x), dim=dim, keepdim=True)))
+
+    def option_price(self, batch, sensor, option_type = "put", dim=0):
+        """
+        Outputs the exact solution.
+        """
+        x = sensor.to(batch["K"].device)
+        t, q = batch["tau"], batch["q"]
+        q_t = torch.mean(q, dim=-1, keepdim=True)
+
+        n = batch["sigma"].shape[-1] # the dimension of S_t
+        batch_size = batch["sigma"].shape[0]
+        RHO = batch["rho"].view(batch_size, 1, 1).expand(batch_size, n, n).clone()
+        RHO.as_strided((batch_size, n), (n ** 2, n + 1)).fill_(1)
+        sig_t = 1/n**2 * torch.sum(batch["sigma"].unsqueeze(2) * RHO * batch["sigma"].unsqueeze(1), (1,2)).reshape(-1,1)
+        sig = torch.mean(batch["sigma"]**2, dim=1, keepdim=True)
+        F = torch.exp(torch.mean(torch.log(x), dim=dim, keepdim=True)) * torch.exp((batch["r"] - q_t - (sig - sig_t)/2 ) * t)
+        d_p =(
+                torch.log(F / batch["K"])
+                 +  0.5 * t * sig_t
+            ) / torch.sqrt(sig_t * t)
+        if option_type == "call":
+            return torch.exp(-batch["r"]*t) * (F * n_dist(d_p) - batch["K"] * n_dist(d_p - torch.sqrt(sig_t * t)))
+        else:
+            return torch.exp(-batch["r"]*t) * (F * n_dist(d_p) - batch["K"] * n_dist(d_p - torch.sqrt(sig_t * t))) + batch["K"] * torch.exp(-batch["r"]*t) - torch.exp(torch.mean(torch.log(x), dim=dim, keepdim=True)) * torch.exp(-(q_t + (sig - sig_t)/2)*t)
     
     def naf(self, batch, param, No_normalization_and_flatten=False):
         if param == "x":

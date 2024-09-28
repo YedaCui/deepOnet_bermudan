@@ -4,6 +4,7 @@ from .utils import *
 import os
 from abc import ABC, abstractmethod
 import ray
+from .lsmc import PolynomialReg, LSMC
 
 
 class Data_Bermudan(Dataset):
@@ -50,11 +51,11 @@ class Data_Bermudan(Dataset):
             cont_value += torch.from_numpy(self.payoff.random(cont_value.shape[0])).to(cont_value.device)
         cont_value[-dt_pde["s"].shape[0]:,:] = 0
 
-        data_batch["payoff"] = torch.maximum(cont_value, self.pde.get_payoff(self.payoff.x.reshape(self.dimension,-1), data_batch["K"], opt_type=self.option_type))
+        data_batch["payoff"] = torch.maximum(cont_value, self.pde.get_payoff(self.payoff.x.reshape(self.dimension,-1), data_batch["K"], opt_type=self.option_type, dim=0))
         data_batch["t"].fill_(self.dt)
         xs = self.pde.get_X(data_batch, data_batch["x"])
 
-        data_batch["y"] = torch.exp(- data_batch["r"] * self.dt) * parallel_interpolation(xs, self.payoff.x, data_batch["payoff"], interp_method=self.interp_method)
+        data_batch["y"] = torch.exp(- data_batch["r"] * self.dt) * parallel_interpolation(xs, self.payoff.x.reshape(-1, self.dimension), data_batch["payoff"], interp_method=self.interp_method)
 
         return data_batch
 
@@ -183,8 +184,19 @@ class Bermudan_basket(Bermudan):
         super().__init__(pde, payoff, config)
 
     def solution(self, batch):
-        pass
+        N = int(batch["x"].shape[0] / self.num_ex)
+        regmethod = PolynomialReg(2,batch["x"].shape[1])
+
+        dt = self.T/self.num_ex
+        res = []
+        for i,j in zip(range(self.num_ex, 0, -1), range(self.num_ex)):
+            pricer = LSMC(pde=self.pde, regmethod=regmethod, T=dt*i, opt_type=self.option_type, num_ex=i, num_sim=100000)
+            batch_roam = {
+            _param: batch[_param][N*j:N*(j+1)] for _param in batch.keys()
+        }
+            res.append(pricer.pricing(batch_roam)[0])
+        return torch.concat(res, dim=-1)
+
 
 
 BERMUDANS = {bermudan.__name__: bermudan for bermudan in Bermudan.get_subclasses()}
-
