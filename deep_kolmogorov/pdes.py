@@ -298,7 +298,7 @@ class BSr(Pde):
             return x * torch.exp(-q*t) * n_dist(_d) - K * torch.exp(-r*t) * n_dist(_d - sigma_sqrtt) + K * torch.exp(-r*t) - x * torch.exp(-q*t)
     
     @staticmethod
-    def get_payoff(x, K, opt_type):
+    def get_payoff(x, K, opt_type, dim=None):
         x = x.to(K.device)
         if opt_type == "call":
             return torch.nn.ReLU()(x - K)

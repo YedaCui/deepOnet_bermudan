@@ -224,6 +224,8 @@ class KolmogorovNet(torch.nn.Module):
         with torch.no_grad():
             if train:
                 y = batch["y"]
+                non_nan_mask = ~torch.isnan(y).any(dim=1)
+                y = y[non_nan_mask]
             else:
                 if self.saved_data:
                     y = batch["solution"] # shape batch["x"].shape[0] / self.bermudan.num_ex
@@ -237,6 +239,7 @@ class KolmogorovNet(torch.nn.Module):
             )
             # tensor = tensor.float()
         if train:
+            tensor = tensor[non_nan_mask]
             y_pred = self.net.forward(tensor)
         else:
             y_pred = self.price_bermudan(batch)
@@ -270,10 +273,11 @@ class KolmogorovNet(torch.nn.Module):
                         self.bermudan.pde.normalize_and_flatten(batch_sensor, self.bermudan.output_params)], dim = 1
                     )
                     cont_value = self.net.forward(tensor).reshape(batch["x"].shape[0],size_sensor)
-            if self.bermudan.option_type == "call":
-                dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(sensor.reshape(1,-1) - batch["K"]))
-            else:
-                dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(batch["K"]-sensor.reshape(1,-1)))
+            # if self.bermudan.option_type == "call":
+            #     dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(sensor.reshape(1,-1) - batch["K"]))
+            # else:
+            #     dt_payoff = torch.maximum(cont_value, torch.nn.ReLU()(batch["K"]-sensor.reshape(1,-1)))
+            dt_payoff = torch.maximum(cont_value, self.bermudan.pde.get_payoff(sensor.T, batch["K"], opt_type=self.bermudan.option_type, dim=0)) 
             
             batch["x"] = batch_x[N*(i-1):N*i,:]
             with torch.no_grad():

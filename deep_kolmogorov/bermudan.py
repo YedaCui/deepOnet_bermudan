@@ -190,7 +190,7 @@ class Bermudan_basket(Bermudan):
         dt = self.T/self.num_ex
         res = []
         for i,j in zip(range(self.num_ex, 0, -1), range(self.num_ex)):
-            pricer = LSMC(pde=self.pde, regmethod=regmethod, T=dt*i, opt_type=self.option_type, num_ex=i, num_sim=100000)
+            pricer = LSMC(pde=self.pde, regmethod=regmethod, T=dt*i, opt_type=self.option_type, num_ex=i, num_sim=500000)
             batch_roam = {
             _param: batch[_param][N*j:N*(j+1)] for _param in batch.keys()
         }

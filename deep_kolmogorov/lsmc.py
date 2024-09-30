@@ -92,16 +92,20 @@ class LSMC:
 
     def pricing(self, batch):
         batch_sim = {_param:batch[_param].repeat_interleave(self.num_sim, dim=0) for _param in batch.keys()}
-        x_sim = [batch_sim["s"].clone()]
+        x_sim = [batch_sim["x"].clone()]
         batch_sim["t"].fill_(self.dt)
         for _ in range(self.num_ex):
             x_sim.append(self.pde.sde(x_sim[-1], batch_sim["r"], batch_sim["q"], batch_sim["sigma"], batch_sim["t"], batch_sim["rho"]))
-        x_sim = torch.stack(x_sim, dim=1)
-        x_sim = x_sim.reshape(self.num_sim, batch["K"].shape[0], self.num_ex+1, x_sim.shape[-1]).permute(1,0,2,3)
-        K = batch_sim["K"].reshape(self.num_sim, batch["K"].shape[0], -1).permute(1,0,2).unsqueeze(2)
-        r = batch_sim["r"].reshape(self.num_sim, batch["K"].shape[0], -1).permute(1,0,2).squeeze(-1)
+        x_sim = torch.stack(x_sim, dim=-2)
+        # x_sim = x_sim.reshape(self.num_sim, batch["K"].shape[0], self.num_ex+1, batch["x"].shape[-1]).permute(1,0,2,3)
+        # K = batch_sim["K"].reshape(self.num_sim, batch["K"].shape[0], -1).permute(1,0,2).unsqueeze(2)
+        # r = batch_sim["r"].reshape(self.num_sim, batch["K"].shape[0], -1).permute(1,0,2).squeeze(-1)
+        # payoff_sim = self.pde.get_payoff(x_sim, K, self.opt_type).squeeze(-1) # with dimension num_batch \times num_sim \times num_ex + 1
 
-        payoff_sim = self.pde.get_payoff(x_sim, K, self.opt_type).squeeze(-1) # with dimension num_batch \times num_sim \times num_ex + 1
+        x_sim = x_sim.reshape(batch["K"].shape[0], self.num_sim, self.num_ex+1, batch["x"].shape[-1])
+        K = batch_sim["K"].reshape(batch["K"].shape[0], self.num_sim, -1).unsqueeze(2)
+        r = batch_sim["r"].reshape(batch["K"].shape[0], self.num_sim)
+        payoff_sim = self.pde.get_payoff(x_sim, K, self.opt_type, dim=-1).squeeze(-1) # with dimension num_batch \times num_sim \times num_ex + 1
 
         Y = payoff_sim[...,-1]
         for i in range(self.num_ex-1, -1, -1):

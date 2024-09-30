@@ -1554,32 +1554,32 @@ import torch
 ####################################################### generate data for geometric basket case #######################################################
 #######################################################################################################################################################
 
-# config = {
-#         "pde": "BSbasketGmean",
-#         "payoff": "GRF",
-#         "sensor": torch.from_numpy(utils.qmc_grid(n=200,d=3)).float(),
-#         "size_sensor": 200,
-#         "kernel": "RBF",
-#         "length_scale": 10,
-#         "var_scale": 1,
-#         "var_rescale": False,
-#         "var_rescale_k": 1,
-#         "bermudan": "Bermudan_basket",
-#         "T": 1,
-#         "num_ex": 2,
-#         "option_type": "put",
-#         "output_params": ["x",  "r", "q", "sigma", "rho", "K"],
-#         "frezed_params": {"t":0},
-#         "interp_method": "linear",
-#         "bs_train": 10000,
-#         "bs_test": 10,
-#         "bs_val": 10,
-#         "n_train_batches": 200,
-#         "n_test_batches": 10000,
-#         "n_val_batches": 10000,
-#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/free_test_num_ex_2_qmax_0.1_num_sensor_200"
-#     }
-# sampling.sampling(config=config, device="cuda:0")
+config = {
+        "pde": "BSbasketGmean",
+        "payoff": "GRF",
+        "sensor": torch.from_numpy(utils.qmc_grid(n=200,d=3)).float(),
+        "size_sensor": 200,
+        "kernel": "RBF",
+        "length_scale": 10,
+        "var_scale": 1,
+        "var_rescale": False,
+        "var_rescale_k": 1,
+        "bermudan": "Bermudan_basket",
+        "T": 1,
+        "num_ex": 2,
+        "option_type": "put",
+        "output_params": ["x",  "r", "q", "sigma", "rho", "K"],
+        "frezed_params": {"t":0},
+        "interp_method": "linear",
+        "bs_train": 10000,
+        "bs_test": 10,
+        "bs_val": 10,
+        "n_train_batches": 200,
+        "n_test_batches": 10000,
+        "n_val_batches": 10000,
+        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/free_test_num_ex_2_qmax_0.1_num_sensor_200"
+    }
+sampling.sampling(config=config, device="cuda:2", data_types=["test"])
 
 # config = {
 #         "pde": "BSbasketGmean",
@@ -1716,83 +1716,83 @@ import torch
 #     }
 # sampling.sampling(config=config, device="cuda:1")
 
-config = {
-        "pde": "BSbasketGmean",
-        "payoff": "GRF",
-        "sensor": torch.from_numpy(utils.qmc_grid(n=200,d=3,g1=50,g2=50)).float(),
-        "size_sensor": 200,
-        "kernel": "RBF",
-        "length_scale": 10,
-        "var_scale": 1,
-        "var_rescale": False,
-        "var_rescale_k": 1,
-        "bermudan": "Bermudan_basket",
-        "T": 1,
-        "num_ex": 12,
-        "option_type": "put",
-        "output_params": ["x",  "r", "q", "sigma", "rho", "K"],
-        "frezed_params": {"t":0},
-        "interp_method": "linear",
-        "bs_train": 10000,
-        "bs_test": 10,
-        "bs_val": 10,
-        "n_train_batches": 200,
-        "n_test_batches": 10000,
-        "n_val_batches": 10000,
-        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/free_test_num_ex_12_qmax_0.1_num_sensor_200"
-    }
-sampling.sampling(config=config, device="cuda:2")
+# config = {
+#         "pde": "BSbasketGmean",
+#         "payoff": "GRF",
+#         "sensor": torch.from_numpy(utils.qmc_grid(n=200,d=3,g1=50,g2=50)).float(),
+#         "size_sensor": 200,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "var_rescale": False,
+#         "var_rescale_k": 1,
+#         "bermudan": "Bermudan_basket",
+#         "T": 1,
+#         "num_ex": 12,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "rho", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 10,
+#         "bs_val": 10,
+#         "n_train_batches": 200,
+#         "n_test_batches": 10000,
+#         "n_val_batches": 10000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/free_test_num_ex_12_qmax_0.1_num_sensor_200"
+#     }
+# sampling.sampling(config=config, device="cuda:2")
 
-config = {
-        "pde": "BSbasketGmean",
-        "payoff": "GRF",
-        "sensor": torch.from_numpy(utils.qmc_grid(n=400,d=3,g1=50,g2=50)).float(),
-        "size_sensor": 400,
-        "kernel": "RBF",
-        "length_scale": 10,
-        "var_scale": 1,
-        "var_rescale": False,
-        "var_rescale_k": 1,
-        "bermudan": "Bermudan_basket",
-        "T": 1,
-        "num_ex": 12,
-        "option_type": "put",
-        "output_params": ["x",  "r", "q", "sigma", "rho", "K"],
-        "frezed_params": {"t":0},
-        "interp_method": "linear",
-        "bs_train": 10000,
-        "bs_test": 10,
-        "bs_val": 10,
-        "n_train_batches": 200,
-        "n_test_batches": 10000,
-        "n_val_batches": 10000,
-        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/free_test_num_ex_12_qmax_0.1_num_sensor_400"
-    }
-sampling.sampling(config=config, device="cuda:2")
+# config = {
+#         "pde": "BSbasketGmean",
+#         "payoff": "GRF",
+#         "sensor": torch.from_numpy(utils.qmc_grid(n=400,d=3,g1=50,g2=50)).float(),
+#         "size_sensor": 400,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "var_rescale": False,
+#         "var_rescale_k": 1,
+#         "bermudan": "Bermudan_basket",
+#         "T": 1,
+#         "num_ex": 12,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "rho", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 10,
+#         "bs_val": 10,
+#         "n_train_batches": 200,
+#         "n_test_batches": 10000,
+#         "n_val_batches": 10000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/free_test_num_ex_12_qmax_0.1_num_sensor_400"
+#     }
+# sampling.sampling(config=config, device="cuda:2")
 
-config = {
-        "pde": "BSbasketGmean",
-        "payoff": "GRF",
-        "sensor": torch.from_numpy(utils.qmc_grid(n=800,d=3,g1=50,g2=50)).float(),
-        "size_sensor": 800,
-        "kernel": "RBF",
-        "length_scale": 10,
-        "var_scale": 1,
-        "var_rescale": False,
-        "var_rescale_k": 1,
-        "bermudan": "Bermudan_basket",
-        "T": 1,
-        "num_ex": 12,
-        "option_type": "put",
-        "output_params": ["x",  "r", "q", "sigma", "rho", "K"],
-        "frezed_params": {"t":0},
-        "interp_method": "linear",
-        "bs_train": 10000,
-        "bs_test": 10,
-        "bs_val": 10,
-        "n_train_batches": 200,
-        "n_test_batches": 10000,
-        "n_val_batches": 10000,
-        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/free_test_num_ex_12_qmax_0.1_num_sensor_800"
-    }
-sampling.sampling(config=config, device="cuda:2")
+# config = {
+#         "pde": "BSbasketGmean",
+#         "payoff": "GRF",
+#         "sensor": torch.from_numpy(utils.qmc_grid(n=800,d=3,g1=50,g2=50)).float(),
+#         "size_sensor": 800,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "var_rescale": False,
+#         "var_rescale_k": 1,
+#         "bermudan": "Bermudan_basket",
+#         "T": 1,
+#         "num_ex": 12,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "rho", "K"],
+#         "frezed_params": {"t":0},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 10,
+#         "bs_val": 10,
+#         "n_train_batches": 200,
+#         "n_test_batches": 10000,
+#         "n_val_batches": 10000,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/free_test_num_ex_12_qmax_0.1_num_sensor_800"
+#     }
+# sampling.sampling(config=config, device="cuda:2")

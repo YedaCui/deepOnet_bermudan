@@ -10,7 +10,7 @@ from .pdes import HYPERCUBES, PDES
 from .bermudan import BERMUDANS, Data_Saved
 from torch.utils.data import DataLoader
 from .payoff import PAYOFFS
-from .utils import MP_grid
+from .utils import MP_grid, qmc_grid
 
 OPTIMIZERS = {
     "adamw": lambda params, lr, weight_decay: torch.optim.AdamW(
@@ -3092,8 +3092,6 @@ HYPERCONFIGS = {
         "out_channels": tune.grid_search([5,10]),
         "kernel_size": tune.grid_search([20,40]),
     },
-<<<<<<< HEAD
-=======
     "avg_bs_bermudan_put_free_test_num_ex_2_qmax_0.1_sensor_type_MP_num_sensor_100_cnn": {
         "seed": tune.grid_search([0]),
         "checkpoint": True,
@@ -3136,7 +3134,45 @@ HYPERCONFIGS = {
         "out_channels": tune.grid_search([5,10]),
         "kernel_size": tune.grid_search([20,40]),
     },
->>>>>>> ec940f51 (update changes)
+
+    "avg_bs_bermudan_basketput_free_test_num_ex_2_sensor_type_qmc_num_sensor_200": {
+        "seed": tune.grid_search([0]),
+        "checkpoint": True,
+        "pde": "BSbasketGmean",
+        "net": "DNN",
+        "payoff": "GRF",
+        "sensor": torch.from_numpy(qmc_grid(n=200, d=3)).float(),
+        "size_sensor": 200,
+        "kernel": "RBF", 
+        "length_scale":10,
+        "var_scale":1,
+        "bermudan": "Bermudan_1D",
+        "T": 1,
+        "num_ex": 2,
+        "option_type": "put",
+        "output_params": ["x", "r", "q", "sigma", "rho", "K"],
+        "frezed_params": {"t":0},
+        "interp_method": "linear",
+        "opt": "adamw",
+        "bs_train": 10000,
+        "bs_test": 10,
+        "n_train_batches": 2000,
+        "n_test_batches": 10000,
+        "accu_steps": 1,
+        "lr": 0.01,
+        "min_lr": 1e-8,
+        "lr_decay": 0.25,
+        "lr_decay_patience": tune.grid_search([2,4]),
+        "weight_decay": 0.01,
+        "unfreeze": "all",
+        "unfreeze_patience": 1,
+        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/free_test_num_ex_2_qmax_0.1_num_sensor_200",
+        "n_iterations": 30,
+        "size_t_x_u": [0,3,9],
+        "num_width" : tune.grid_search([35, 55, 75]),
+        "num_depth" : tune.grid_search([5,7]),
+    },
+    
 }
 
 
