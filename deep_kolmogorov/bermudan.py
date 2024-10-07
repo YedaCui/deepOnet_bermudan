@@ -43,7 +43,7 @@ class Data_Bermudan(Dataset):
         data_batch["t"] = torch.arange(0, self.T, self.dt, device=device).reshape(-1,1).repeat_interleave(dt_pde["s"].shape[0], dim=0)
         data_batch["x"] = self.pde.get_X(data_batch, data_batch["s"])
         data_batch["tau"] = self.T - data_batch["t"] - self.dt
-        cont_value = self.pde.option_price(data_batch, self.payoff.x.reshape(self.dimension,-1), option_type=self.option_type)
+        cont_value = self.pde.option_price(data_batch, self.payoff.x.T, option_type=self.option_type)
         if self.var_rescale == True:
             var_rescale_const = self.var_rescale_k * (self.T - torch.arange(self.dt, self.T, self.dt)).reshape(-1,1).repeat_interleave(dt_pde["s"].shape[0],dim=0).to(cont_value.device)
             cont_value[:-dt_pde["s"].shape[0],:] = cont_value[:-dt_pde["s"].shape[0],:] + var_rescale_const * torch.from_numpy(self.payoff.random(cont_value[:-dt_pde["s"].shape[0],:].shape[0])).to(cont_value.device)
@@ -51,11 +51,15 @@ class Data_Bermudan(Dataset):
             cont_value += torch.from_numpy(self.payoff.random(cont_value.shape[0])).to(cont_value.device)
         cont_value[-dt_pde["s"].shape[0]:,:] = 0
 
-        data_batch["payoff"] = torch.maximum(cont_value, self.pde.get_payoff(self.payoff.x.reshape(self.dimension,-1), data_batch["K"], opt_type=self.option_type, dim=0))
+        data_batch["payoff"] = torch.maximum(cont_value, self.pde.get_payoff(self.payoff.x.T, data_batch["K"], opt_type=self.option_type, dim=0))
         data_batch["t"].fill_(self.dt)
         xs = self.pde.get_X(data_batch, data_batch["x"])
 
-        data_batch["y"] = torch.exp(- data_batch["r"] * self.dt) * parallel_interpolation(xs, self.payoff.x.reshape(-1, self.dimension), data_batch["payoff"], interp_method=self.interp_method)
+        data_batch["y"] = torch.exp(- data_batch["r"] * self.dt) * parallel_interpolation(xs, self.payoff.x, data_batch["payoff"], interp_method=self.interp_method)
+        
+        data_batch["y_true"] = torch.exp(- data_batch["r"] * self.dt) * torch.maximum(cont_value[:,[0]], self.pde.get_payoff(xs, data_batch["K"], opt_type=self.option_type, dim=-1))
+
+        print('hello')
 
         return data_batch
 

@@ -15,6 +15,7 @@ def sampling(config, device="cuda", data_types=["train", "val", "test"]):
         if "hypercubes" in config
         else {}
     )
+    print(config["sensor"][0])
     pde = PDES[config["pde"]](**pde_kwargs)
     payoff_kwargs = {
         _arg: config[_arg] for _arg in ["sensor", "kernel", "length_scale", "var_scale"] if _arg in config.keys()

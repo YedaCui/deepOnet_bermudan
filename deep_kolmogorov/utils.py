@@ -9,6 +9,10 @@ def _interp(args):
     x, _x, _y = args
     return interpolate.LinearNDInterpolator(x, _y)(_x)
 
+# def _interp(args):
+#     x, _x, _y = args
+#     return interpolate.Rbf(*x.T, _y, function='multiquadric')(*_x)
+
 
 def parallel_interpolation(xs, x, features, interp_method):
     '''
@@ -32,12 +36,17 @@ def parallel_interpolation(xs, x, features, interp_method):
     
     print("Begin to do the interpolation")
     if x.shape[1] == 1:
+        print("the sensor shape [1] is 1")
         if interp_method == "linear":
             res = np.vstack([np.interp(_x, np.ravel(x), _y) for _x, _y in zip(xs, features)])
     else:
         if interp_method == "linear":
             # interps = [interpolate.LinearNDInterpolator(x, _y) for _y in features]
             # res = [_interp(_x) for _interp, _x in zip(interps, xs)]
+
+            # interps = [interpolate.Rbf(*x.T, _y, function='multiquadric') for _y in features]
+            # res = [_interp(*_x) for _interp, _x in zip(interps, xs)]
+
             with ProcessPoolExecutor() as executor:
                 try:
                     res = list(executor.map(_interp, zip([x]*len(xs), xs,features)))
@@ -115,12 +124,13 @@ def MP_grid(a=0.01, s=10, b=80, g1=10, g2=5, n=50):
     Gblock2 = s + g2 * np.sinh(c2 * linspace2)
     
     Gblock = np.concatenate([Gblock1, Gblock2],axis=0)
-    return Gblock.astype(np.float32)
+    return Gblock.reshape(-1,1).astype(np.float32)
     
-def qmc_grid(a=0.01, b=80, d=3, n=50, shiftbymp=True, s=10, g1=10, g2=5):
+def qmc_grid(a=0.01, b=80, d=3, n=50, shiftbymp=True, s=10, g1=10, g2=5, seed=0):
     # if shiftbymp is True, shift the samples by MP nonlinear mapping.
+    
 
-    sampler = Sobol(d)
+    sampler = Sobol(d, seed=seed)
     samples = sampler.random(n)
 
     if not shiftbymp:
@@ -129,6 +139,9 @@ def qmc_grid(a=0.01, b=80, d=3, n=50, shiftbymp=True, s=10, g1=10, g2=5):
         c1 = np.arcsinh((a - s) / g1)
         c2 = np.arcsinh((b - s) / g2)
         res = np.where(samples <= 0.5, s + g1 * np.sinh(c1 * (0.5-samples)*2), s + g2 * np.sinh(c2 * (samples-0.5)*2))
+
+    sorted_indices = np.lexsort([res[:, i] for i in range(d-1, -1, -1)])
+    res = res[sorted_indices]
 
     return res.astype(np.float32)
         

@@ -3146,7 +3146,7 @@ HYPERCONFIGS = {
         "kernel": "RBF", 
         "length_scale":10,
         "var_scale":1,
-        "bermudan": "Bermudan_1D",
+        "bermudan": "Bermudan_basket",
         "T": 1,
         "num_ex": 2,
         "option_type": "put",

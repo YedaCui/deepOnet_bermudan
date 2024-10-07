@@ -544,7 +544,7 @@ class BSbasketGmean(Pde):
         """
         Get the K from kappa and S_0
         """
-        return batch["kappa"] * torch.mean(batch["s"], dim=-1, keepdim=True)
+        return batch["kappa"] * torch.exp(torch.mean(torch.log(batch["s"]), dim=-1, keepdim=True))
     
     get_r, get_sigma = None, None
 

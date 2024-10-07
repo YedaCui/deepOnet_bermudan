@@ -1557,7 +1557,7 @@ import torch
 config = {
         "pde": "BSbasketGmean",
         "payoff": "GRF",
-        "sensor": torch.from_numpy(utils.qmc_grid(n=200,d=3)).float(),
+        "sensor": torch.from_numpy(utils.qmc_grid(n=200,d=3,seed=0)).float(),
         "size_sensor": 200,
         "kernel": "RBF",
         "length_scale": 10,
@@ -1579,7 +1579,7 @@ config = {
         "n_val_batches": 10000,
         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/free_test_num_ex_2_qmax_0.1_num_sensor_200"
     }
-sampling.sampling(config=config, device="cuda:2", data_types=["test"])
+sampling.sampling(config=config, device="cuda:2")
 
 # config = {
 #         "pde": "BSbasketGmean",
@@ -1796,3 +1796,38 @@ sampling.sampling(config=config, device="cuda:2", data_types=["test"])
 #         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/free_test_num_ex_12_qmax_0.1_num_sensor_800"
 #     }
 # sampling.sampling(config=config, device="cuda:2")
+
+
+
+# config = {
+#         "pde": "BSbasketGmean",
+#         "payoff": "GRF",
+#         "sensor": torch.from_numpy(utils.qmc_grid(n=200,d=2,seed=0)).float(),
+#         "size_sensor": 200,
+#         "kernel": "RBF",
+#         "length_scale": 10,
+#         "var_scale": 1,
+#         "var_rescale": False,
+#         "var_rescale_k": 1,
+#         "bermudan": "Bermudan_basket",
+#         "T": 1,
+#         "num_ex": 1,
+#         "option_type": "put",
+#         "output_params": ["x",  "r", "q", "sigma", "rho", "K"],
+#         "frezed_params": {"t":0,
+#                           "s":10,
+#                           "r":0.025,
+#                           "q":0,
+#                           "sigma":0.3,
+#                           "rho":0,
+#                           "kappa":1},
+#         "interp_method": "linear",
+#         "bs_train": 10000,
+#         "bs_test": 10,
+#         "bs_val": 10,
+#         "n_train_batches": 20,
+#         "n_test_batches": 1,
+#         "n_val_batches": 1,
+#         "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/test1"
+#     }
+# sampling.sampling(config=config, device="cuda:2", data_types=["train"])
