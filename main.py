@@ -5,15 +5,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     args.gpus = 1
-    # args.mode = "avg_bs_bermudan_put_free_test_num_ex_2_qmax_0.1_sensor_type_MP_num_sensor_200"
-    # main(vars(args))
-    # args.mode = "avg_bs_bermudan_put_free_test_num_ex_2_qmax_0.1_sensor_type_MP_num_sensor_200_var_rescale_2"
-    # main(vars(args))
-
-    # args.mode = "avg_bs_bermudan_put_free_test_num_ex_4_qmax_0.1_sensor_type_MP_num_sensor_200"
-    # main(vars(args))
-    # args.mode = "avg_bs_bermudan_put_free_test_num_ex_250_qmax_0.1_sensor_type_MP_num_sensor_50_var_rescale_2"
-    # args.mode = "avg_bs_bermudan_put_free_test_num_ex_12_qmax_0.1_sensor_type_MP_num_sensor_100_var_rescale_2_cnn"
-    # args.mode = "avg_bs_bermudan_put_free_test_num_ex_2_qmax_0.1_sensor_type_MP_num_sensor_100_cnn"
-    args.mode = "avg_bs_bermudan_basketput_free_test_num_ex_2_sensor_type_qmc_num_sensor_200"
+    args.mode = "avg_bs_bermudan_basketput_free_test_num_ex_2_sensor_type_qmc_num_sensor_800"
     main(vars(args))

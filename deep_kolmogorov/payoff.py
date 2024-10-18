@@ -1,7 +1,13 @@
 import abc
 import numpy as np
 from sklearn import gaussian_process as gp
+from scipy.interpolate import interpn
+import torch
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
+def _interp(args):
+    points, _res, _x = args
+    return interpn(points, _res, _x, bounds_error=False, fill_value=None)
 
 class FunctionSpace(abc.ABC):
 
@@ -68,20 +74,52 @@ class GRF(FunctionSpace):
             "quadratic", or "cubic".
     """
 
-    def __init__(self, sensor, kernel="RBF", length_scale=10, var_scale=1):
+    def __init__(self, sensor, grids=None, kernel="RBF", length_scale=10, var_scale=1):
         self.x = sensor
-        self.N = self.x.shape[0]
+        self.points = None
+        if grids is not None:
+            self.dim = sensor.shape[-1]
+            self.len = grids.shape[0]
+            self.points = [grids.ravel() for _ in range(self.dim)]
+            self.grids = torch.from_numpy(np.column_stack([c.ravel() for c in np.meshgrid(*self.points, indexing="ij")]))
+        else:
+            self.grids = self.x
+        self.N = self.grids.shape[0]
         if kernel == "RBF":
             K = var_scale * gp.kernels.RBF(length_scale=length_scale)
         elif kernel == "AE":
             K = var_scale * gp.kernels.Matern(length_scale=length_scale, nu=0.5)
-        self.K = K(self.x)
+        self.K = K(self.grids)
         self.L = np.linalg.cholesky(self.K + 1e-13 * np.eye(self.N))
 
     def random(self, size):
         u = np.random.randn(self.N, size)
-        return np.dot(self.L, u).T
-    
+        res = np.dot(self.L, u).T
+        return res
+
+    def interp(self, xs, payoff):
+        if payoff.device.type != "cpu":
+            payoff = np.array(payoff.cpu(), dtype=str(payoff.cpu().dtype).split(".")[-1])
+        res = payoff.reshape(payoff.shape[0], *[self.len for _ in range(self.dim)])
+        if xs is not None:
+            if xs.device.type != "cpu":
+                xs = np.array(xs.cpu(), dtype=str(xs.cpu().dtype).split(".")[-1])
+            sample = [interpn(self.points, _res, _x, bounds_error=False, fill_value=None) for _x,_res in zip(xs, res)]
+            # with ThreadPoolExecutor() as executor:
+            #     try:
+            #         sample = list(executor.map(_interp, zip([self.points]*len(xs), res, xs)))
+            #     except Exception as e:
+            #         print(f"Task generated an exception {e}.")
+        else:
+            x = np.array(self.x.cpu(), dtype=str(self.x.cpu().dtype).split(".")[-1])
+            sample = [interpn(self.points, _res, x) for _res in res]
+            # with ThreadPoolExecutor() as executor:
+            #     try:
+            #         sample = list(executor.map(_interp, zip([self.points]*len(res), res, [x]*len(res))))
+            #     except Exception as e:
+            #         print(f"Task generated an exception {e}.")
+        return np.vstack(sample)
+            
 
 
 

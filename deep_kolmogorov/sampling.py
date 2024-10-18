@@ -18,7 +18,7 @@ def sampling(config, device="cuda", data_types=["train", "val", "test"]):
     print(config["sensor"][0])
     pde = PDES[config["pde"]](**pde_kwargs)
     payoff_kwargs = {
-        _arg: config[_arg] for _arg in ["sensor", "kernel", "length_scale", "var_scale"] if _arg in config.keys()
+        _arg: config[_arg] for _arg in ["sensor", "grids", "kernel", "length_scale", "var_scale"] if _arg in config.keys()
         }
     print(config["payoff"])
     payoff = PAYOFFS[config["payoff"]](**payoff_kwargs)
