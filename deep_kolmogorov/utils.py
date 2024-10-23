@@ -35,7 +35,7 @@ def parallel_interpolation(xs, x, features, interp_method):
 
     
     print("Begin to do the interpolation")
-    if x.shape[1] == 1:
+    if xs.shape[1] == 1:
         print("the sensor shape [1] is 1")
         if interp_method == "linear":
             res = np.vstack([np.interp(_x, np.ravel(x), _y) for _x, _y in zip(xs, features)])
@@ -84,6 +84,59 @@ def CN_bermudan_1D(cpflag, K, T, num_ex, vol, r, d, N = 2000, x_max=3, S0=10):
     
     # set up the matrix
     a = 0.25*dt*vol*vol/(dx*dx)
+    b = 0.25*dt*mu/dx
+    c = 0.5*dt*r
+    A, B = torch.zeros((a.shape[0],N+1,N+1),device=device), torch.zeros((a.shape[0],N+1,N+1),device=device)
+    for _n in range(a.shape[0]):
+        _a, _b, _c = a[_n], b[_n], c[_n]
+        A[_n,:,:] = (1+_c+2*_a)*torch.eye(N+1,device=device) + (-_a-_b)*torch.diag(torch.ones(N,device=device),1) + (_b-_a)*torch.diag(torch.ones(N,device=device),-1)
+        B[_n,:,:] = (1-_c-2*_a)*torch.eye(N+1,device=device) + (_a+_b)*torch.diag(torch.ones(N,device=device),1) + (_a-_b)*torch.diag(torch.ones(N,device=device),-1)
+    Ainv = torch.linalg.inv(A)
+    
+    if cpflag == 'call':
+        # Option payoff at maturity
+        V = torch.clamp(S0*torch.exp(X).reshape(1,-1) - K.reshape(-1,1),0,1e10).unsqueeze(1).permute(0,2,1)
+    elif cpflag == 'put':
+        V = torch.clamp(K.reshape(-1,1) - S0*torch.exp(X).reshape(1,-1),0,1e10).unsqueeze(1).permute(0,2,1)
+    
+    V0 = V.clone()
+    Vs = []
+    for j in range(1, J+1):
+        V = B @ V
+        V = Ainv @ V
+        # apply early exercise boundary conditions:
+        if (j%dJ==0) and j!=J:
+            Vs.append(V.clone().squeeze(-1))
+            V = torch.where(V>V0,V,V0)
+    Vs.append(V.clone().squeeze(-1))
+    return S0*torch.exp(X), Vs[::-1]
+
+def CN_bermudan_ND(cpflag, K, T, num_ex, vol, r, d, rho, N = 2000, x_max=3, S0=10):
+    '''
+    This only works for Geometirc Basket mean bermudan options.
+    '''
+
+    device = K.device
+    # grid along x dimension:
+    X = torch.linspace(-x_max,x_max,N+1,device=device)
+    #number of steps along x
+    dx = 2*x_max/N
+
+    d_bar = torch.mean(d, dim=-1)
+    n = vol.shape[-1] # the dimension of S_t
+    batch_size = vol.shape[0]
+    sig_bar = torch.mean(vol**2, dim=1)
+    RHO = rho.view(batch_size, 1, 1).expand(batch_size, n, n).clone()
+    RHO.as_strided((batch_size, n), (n ** 2, n + 1)).fill_(1)
+    sig_tilde = 1/n**2 * torch.sum(vol.unsqueeze(2) * RHO * vol.unsqueeze(1), (1,2)).flatten()
+    mu = (r-d_bar-0.5*sig_bar)
+    #number of time steps
+    J = int((int(1000/num_ex) + 1) * num_ex)
+    dt = T/J
+    dJ = int(J/num_ex)
+    
+    # set up the matrix
+    a = 0.25*dt*sig_tilde/(dx*dx)
     b = 0.25*dt*mu/dx
     c = 0.5*dt*r
     A, B = torch.zeros((a.shape[0],N+1,N+1),device=device), torch.zeros((a.shape[0],N+1,N+1),device=device)

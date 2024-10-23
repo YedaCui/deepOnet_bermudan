@@ -237,7 +237,7 @@ class KolmogorovNet(torch.nn.Module):
                 [batch["payoff"],
                  self.bermudan.pde.normalize_and_flatten(batch, self.bermudan.output_params)], dim = 1
             )
-            # tensor = tensor.float()
+            tensor = tensor.float()
         if train:
             tensor = tensor[non_nan_mask]
             y_pred = self.net.forward(tensor)

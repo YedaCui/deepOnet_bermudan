@@ -61,7 +61,7 @@ class Data_Bermudan(Dataset):
 
             data_batch["y"] = torch.exp(- data_batch["r"] * self.dt) * parallel_interpolation(xs, self.payoff.x, data_batch["payoff"], interp_method=self.interp_method)
         else:
-            print("no hello")
+            print("the new code first caluelate the value at the dense self.payoff.grids and then get the value at the sparse self.payoff.x and and xs by interpolation")
             ### the new code first caluelate the value at the dense self.payoff.grids and then get the value at the sparse self.payoff.x and and xs by interpolation
             cont_value = self.pde.option_price(data_batch, self.payoff.grids.T, option_type=self.option_type)
             if self.var_rescale == True:
@@ -79,7 +79,7 @@ class Data_Bermudan(Dataset):
             data_batch["payoff"] = torch.from_numpy(self.payoff.interp(None, data_batch["payoff"])).to(data_batch["payoff"].device) # interpolate to get the sparse payoff
         
         
-        data_batch["y_true"] = torch.exp(- data_batch["r"] * self.dt) * torch.maximum(cont_value[:,[0]], self.pde.get_payoff(xs, data_batch["K"], opt_type=self.option_type, dim=-1))
+        # data_batch["y_true"] = torch.exp(- data_batch["r"] * self.dt) * torch.maximum(cont_value[:,[0]], self.pde.get_payoff(xs, data_batch["K"], opt_type=self.option_type, dim=-1))
         
         return data_batch
 
@@ -208,18 +208,34 @@ class Bermudan_basket(Bermudan):
         super().__init__(pde, payoff, config)
 
     def solution(self, batch):
-        N = int(batch["x"].shape[0] / self.num_ex)
-        regmethod = PolynomialReg(2,batch["x"].shape[1])
+        # # use the lsmc
+        # N = int(batch["x"].shape[0] / self.num_ex)
+        # regmethod = PolynomialReg(2,batch["x"].shape[1])
 
-        dt = self.T/self.num_ex
-        res = []
-        for i,j in zip(range(self.num_ex, 0, -1), range(self.num_ex)):
-            pricer = LSMC(pde=self.pde, regmethod=regmethod, T=dt*i, opt_type=self.option_type, num_ex=i, num_sim=500000)
-            batch_roam = {
-            _param: batch[_param][N*j:N*(j+1)] for _param in batch.keys()
+        # dt = self.T/self.num_ex
+        # res = []
+        # for i,j in zip(range(self.num_ex, 0, -1), range(self.num_ex)):
+        #     pricer = LSMC(pde=self.pde, regmethod=regmethod, T=dt*i, opt_type=self.option_type, num_ex=i, num_sim=500000)
+        #     batch_roam = {
+        #     _param: batch[_param][N*j:N*(j+1)] for _param in batch.keys()
+        # }
+        #     res.append(pricer.pricing(batch_roam)[0])
+        # return torch.concat(res, dim=-1)
+
+        N = int(batch["x"].shape[0] / self.num_ex)
+        batch_x = batch["x"].clone() # store the batch["x"]
+        batch = {
+            _param: batch[_param][:N] for _param in batch.keys()
         }
-            res.append(pricer.pricing(batch_roam)[0])
+        
+        grid, values = CN_bermudan_ND(cpflag=self.option_type, K=batch["K"].flatten(), T=self.T, num_ex=self.num_ex, 
+                        vol=batch["sigma"], r=batch["r"].flatten(), d=batch["q"], rho=batch["rho"])
+        
+        res = [parallel_interpolation(torch.exp(torch.mean(torch.log(batch_x[N*i:N*(i+1),:]), dim=-1, keepdim=True)),
+                                    grid, values[i], interp_method="linear") for i in range(self.num_ex)]
         return torch.concat(res, dim=-1)
+
+        
 
 
 
