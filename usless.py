@@ -21,11 +21,11 @@ config = {
         "frezed_params": {"t":0},
         "interp_method": "linear",
         "bs_train": 10000,
-        "bs_test": 5,
-        "bs_val": 5,
-        "n_train_batches": 200,
-        "n_test_batches": 20000,
-        "n_val_batches": 20000,
-        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/test"
+        "bs_test": 100,
+        "bs_val": 100,
+        "n_train_batches": 2,
+        "n_test_batches": 2,
+        "n_val_batches": 2,
+        "data_path": "/home/ycui/Documents/deepOnet_bermudan/data_GeometricBasket/testinterp"
     }
 sampling.sampling(config=config, device="cuda:1", data_types=["train"])

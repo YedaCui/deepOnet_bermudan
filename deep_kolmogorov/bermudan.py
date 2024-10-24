@@ -79,7 +79,7 @@ class Data_Bermudan(Dataset):
             data_batch["payoff"] = torch.from_numpy(self.payoff.interp(None, data_batch["payoff"])).to(data_batch["payoff"].device) # interpolate to get the sparse payoff
         
         
-        # data_batch["y_true"] = torch.exp(- data_batch["r"] * self.dt) * torch.maximum(cont_value[:,[0]], self.pde.get_payoff(xs, data_batch["K"], opt_type=self.option_type, dim=-1))
+        data_batch["y_true"] = torch.exp(- data_batch["r"] * self.dt) * torch.maximum(cont_value[:,[0]], self.pde.get_payoff(xs, data_batch["K"], opt_type=self.option_type, dim=-1))
         
         return data_batch
 

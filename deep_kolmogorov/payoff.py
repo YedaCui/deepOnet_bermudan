@@ -97,14 +97,41 @@ class GRF(FunctionSpace):
         res = np.dot(self.L, u).T
         return res
 
+    # def interp(self, xs, payoff):
+    #     if payoff.device.type != "cpu":
+    #         payoff = np.array(payoff.cpu(), dtype=str(payoff.cpu().dtype).split(".")[-1])
+    #     res = payoff.reshape(payoff.shape[0], *[self.len for _ in range(self.dim)])
+    #     if xs is not None:
+    #         if xs.device.type != "cpu":
+    #             xs = np.array(xs.cpu(), dtype=str(xs.cpu().dtype).split(".")[-1])
+    #         sample = [interpn(self.points, _res, _x, bounds_error=False, fill_value=None) for _x,_res in zip(xs, res)]
+    #         # with ThreadPoolExecutor() as executor:
+    #         #     try:
+    #         #         sample = list(executor.map(_interp, zip([self.points]*len(xs), res, xs)))
+    #         #     except Exception as e:
+    #         #         print(f"Task generated an exception {e}.")
+    #     else:
+    #         x = np.array(self.x.cpu(), dtype=str(self.x.cpu().dtype).split(".")[-1])
+    #         sample = [interpn(self.points, _res, x) for _res in res]
+    #         # with ThreadPoolExecutor() as executor:
+    #         #     try:
+    #         #         sample = list(executor.map(_interp, zip([self.points]*len(res), res, [x]*len(res))))
+    #         #     except Exception as e:
+    #         #         print(f"Task generated an exception {e}.")
+    #     return np.vstack(sample)
+
     def interp(self, xs, payoff):
+        # convert point to 1d then interpolate
         if payoff.device.type != "cpu":
             payoff = np.array(payoff.cpu(), dtype=str(payoff.cpu().dtype).split(".")[-1])
         res = payoff.reshape(payoff.shape[0], *[self.len for _ in range(self.dim)])
+
+        sorted_index = np.argsort(torch.exp(torch.mean(torch.log(self.grids), dim=-1)).cpu())
+        grids_sorted = torch.exp(torch.mean(torch.log(self.grids), dim=-1)).cpu()[sorted_index]
         if xs is not None:
             if xs.device.type != "cpu":
                 xs = np.array(xs.cpu(), dtype=str(xs.cpu().dtype).split(".")[-1])
-            sample = [interpn(self.points, _res, _x, bounds_error=False, fill_value=None) for _x,_res in zip(xs, res)]
+            sample = [np.interp(np.exp(np.mean(np.log(_x),axis=-1)), grids_sorted, _res.ravel()[sorted_index]) for _x,_res in zip(xs, res)]
             # with ThreadPoolExecutor() as executor:
             #     try:
             #         sample = list(executor.map(_interp, zip([self.points]*len(xs), res, xs)))
@@ -112,7 +139,7 @@ class GRF(FunctionSpace):
             #         print(f"Task generated an exception {e}.")
         else:
             x = np.array(self.x.cpu(), dtype=str(self.x.cpu().dtype).split(".")[-1])
-            sample = [interpn(self.points, _res, x) for _res in res]
+            sample = [np.interp(np.exp(np.mean(np.log(x),axis=-1)), grids_sorted, _res.ravel()[sorted_index]) for _res in res]
             # with ThreadPoolExecutor() as executor:
             #     try:
             #         sample = list(executor.map(_interp, zip([self.points]*len(res), res, [x]*len(res))))
